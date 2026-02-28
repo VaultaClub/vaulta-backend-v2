@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vaulta Club — Administration</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06060c;--bg-card:#0c0c18;--bg-s:#111124;--bg-e:#1a1a32;--bg-h:#222244;--pri:#6366f1;--pri-l:#818cf8;--sec:#7c3aed;--acc:#a78bfa;--gold:#fbbf24;--fire:#ef4444;--green:#34d399;--cyan:#22d3ee;--amber:#f59e0b;--text:#e8e8f0;--text2:#9898b8;--dim:#5a5a78;--border:#1e1e3a;--r:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Chakra Petch',sans-serif;display:flex;min-height:100vh}
+::selection{background:var(--pri);color:#fff}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* Sidebar */
+.side{width:240px;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s}
+.s-logo{padding:1.2rem 1rem;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid var(--border)}
+.s-logo-i{width:34px;height:34px;background:linear-gradient(135deg,var(--pri),var(--sec));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Exo 2';font-weight:900;font-size:.9rem;color:#fff}
+.s-logo-t{font-family:'Exo 2';font-weight:900;font-size:1rem;letter-spacing:2px;background:linear-gradient(135deg,var(--pri-l),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.s-logo-sub{font-size:.5rem;color:var(--amber);letter-spacing:3px;text-transform:uppercase;font-weight:700}
+.s-nav{flex:1;padding:.8rem .5rem;overflow-y:auto;display:flex;flex-direction:column;gap:.15rem}
+.s-sec{font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:2.5px;padding:.8rem .7rem .3rem;font-weight:700}
+.s-btn{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:8px;cursor:pointer;transition:.2s;font-size:.82rem;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left}
+.s-btn:hover{background:var(--bg-s);color:var(--text)}.s-btn.on{background:rgba(99,102,241,.1);color:var(--pri-l);font-weight:600}
+.s-btn .ico{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
+.s-btn .badge{margin-left:auto;background:var(--fire);color:#fff;font-family:'JetBrains Mono';font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:50px;min-width:18px;text-align:center}
+.s-foot{padding:1rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:.5rem}
+.s-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--fire));display:flex;align-items:center;justify-content:center;font-family:'Exo 2';font-weight:800;font-size:.7rem;color:#fff}
+.s-uname{font-size:.78rem;font-weight:600}.s-urole{font-size:.55rem;color:var(--amber)}
+/* Main */
+.content{margin-left:240px;flex:1;min-height:100vh}
+.topbar{height:56px;background:rgba(6,6,12,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;gap:1rem;position:sticky;top:0;z-index:40}
+.tb-title{font-family:'Exo 2';font-weight:800;font-size:1.1rem;flex:1}
+.tb-search{background:var(--bg-s);border:1px solid var(--border);border-radius:8px;padding:.35rem .8rem;color:var(--text);font-family:'Chakra Petch';font-size:.82rem;width:280px;outline:none;transition:border .2s}
+.tb-search:focus{border-color:var(--pri)}
+.tb-notif{position:relative;background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:.3rem}.tb-notif:hover{color:var(--text)}
+.tb-notif .dot{position:absolute;top:2px;right:2px;width:7px;height:7px;background:var(--fire);border-radius:50%;border:1.5px solid var(--bg)}
+.body{padding:1.5rem;max-width:1400px}
+/* Cards & Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1rem;position:relative;overflow:hidden;transition:.3s}
+.stat:hover{border-color:var(--pri);transform:translateY(-2px)}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat.s1::before{background:linear-gradient(90deg,var(--pri),var(--acc))}.stat.s2::before{background:linear-gradient(90deg,var(--green),var(--cyan))}.stat.s3::before{background:linear-gradient(90deg,var(--amber),var(--gold))}.stat.s4::before{background:linear-gradient(90deg,var(--fire),var(--amber))}
+.stat-label{font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--dim);font-weight:600}
+.stat-val{font-family:'JetBrains Mono';font-weight:700;font-size:1.6rem;margin:.2rem 0 .1rem}
+.stat-chg{font-size:.7rem;font-family:'JetBrains Mono'}
+.stat-chg.up{color:var(--green)}.stat-chg.dn{color:var(--fire)}
+.stat-ico{position:absolute;top:.8rem;right:.8rem;font-size:1.3rem;opacity:.4}
+/* Panel */
+.pnl{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1.2rem;overflow:hidden}
+.pnl-hd{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;border-bottom:1px solid var(--border)}
+.pnl-tt{font-family:'Exo 2';font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
+.pnl-acts{display:flex;gap:.3rem}
+.btn{background:var(--bg-s);border:1px solid var(--border);color:var(--text);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;padding:.4rem .8rem;border-radius:7px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:.35rem}
+.btn:hover{border-color:var(--pri);background:var(--bg-h)}
+.btn.pri{background:linear-gradient(135deg,var(--pri),var(--sec));border:none;color:#fff}.btn.pri:hover{box-shadow:0 4px 15px rgba(99,102,241,.3)}
+.btn.grn{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:var(--green)}.btn.grn:hover{background:rgba(52,211,153,.2)}
+.btn.red{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--fire)}.btn.red:hover{background:rgba(239,68,68,.2)}
+.btn.amb{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--amber)}.btn.amb:hover{background:rgba(245,158,11,.2)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:600;padding:.6rem 1rem;border-bottom:1px solid var(--border)}
+.tbl td{padding:.65rem 1rem;border-bottom:1px solid rgba(30,30,58,.5);font-size:.82rem;vertical-align:middle}
+.tbl tr:hover td{background:rgba(99,102,241,.03)}
+.tbl .mono{font-family:'JetBrains Mono';font-size:.78rem}
+.chip{display:inline-block;font-size:.6rem;font-weight:700;padding:.15rem .5rem;border-radius:50px;text-transform:uppercase;letter-spacing:1px}
+.chip-ok{background:rgba(52,211,153,.12);color:var(--green)}.chip-warn{background:rgba(245,158,11,.12);color:var(--amber)}.chip-err{background:rgba(239,68,68,.12);color:var(--fire)}.chip-info{background:rgba(99,102,241,.12);color:var(--pri-l)}
+.chip-sec{background:rgba(167,139,250,.12);color:var(--acc)}
+.avatar-sm{width:28px;height:28px;border-radius:50%;background:var(--bg-e);display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;margin-right:.4rem;vertical-align:middle}
+/* Tabs */
+.tabs{display:flex;gap:.2rem;padding:.6rem 1rem;border-bottom:1px solid var(--border);background:var(--bg-s)}
+.tab{background:none;border:none;color:var(--text2);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;padding:.35rem .7rem;border-radius:6px;cursor:pointer;transition:.2s}
+.tab:hover{color:var(--text);background:var(--bg-h)}.tab.on{color:var(--pri-l);background:rgba(99,102,241,.1)}
+/* Forms */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;padding:.8rem 1rem}
+.form-row.full{grid-template-columns:1fr}
+.form-grp{display:flex;flex-direction:column;gap:.2rem}
+.form-lbl{font-size:.65rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1.5px}
+.form-inp{background:var(--bg-s);border:1px solid var(--border);color:var(--text);font-family:'Chakra Petch';font-size:.85rem;padding:.5rem .7rem;border-radius:7px;outline:none;transition:border .2s}
+.form-inp:focus{border-color:var(--pri)}
+select.form-inp{cursor:pointer}
+textarea.form-inp{min-height:80px;resize:vertical}
+/* Chart placeholder */
+.chart{background:var(--bg-s);border:1px dashed var(--border);border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:.82rem;margin:.8rem 1rem}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 1rem .8rem}
+.chart-bar{flex:1;background:linear-gradient(180deg,var(--pri),var(--sec));border-radius:4px 4px 0 0;min-width:20px;position:relative;transition:.3s}
+.chart-bar:hover{opacity:.8}
+.chart-bar-lbl{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:.5rem;color:var(--dim);white-space:nowrap}
+/* Alerts */
+.alert{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;margin:.6rem 1rem;border-radius:8px;font-size:.82rem}
+.alert-info{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);color:var(--pri-l)}
+.alert-warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);color:var(--amber)}
+.alert-ok{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);color:var(--green)}
+/* Empty */
+.empty{text-align:center;padding:2.5rem;color:var(--dim)}
+.empty .ei{font-size:2rem;margin-bottom:.5rem}.empty .et{font-size:.9rem;color:var(--text2)}
+/* Pages */
+.pg{display:none;animation:fi .25s ease}.pg.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(4,4,8,.85);backdrop-filter:blur(10px);z-index:200;display:none;align-items:center;justify-content:center}.modal-bg.on{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:500px;width:92%;animation:fi .25s ease}
+.modal h2{font-family:'Exo 2';font-weight:700;font-size:1rem;margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}
+.modal-close{float:right;background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer}.modal-close:hover{color:var(--text)}
+.modal-foot{display:flex;justify-content:flex-end;gap:.4rem;margin-top:1rem}
+/* Toast */
+.toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--bg-e);border:1px solid var(--border);border-radius:var(--r);padding:.7rem 1.1rem;z-index:300;display:flex;align-items:center;gap:.5rem;transform:translateY(100px);transition:.4s cubic-bezier(.23,1,.32,1);font-size:.85rem;box-shadow:0 10px 35px rgba(0,0,0,.5)}
+.toast.on{transform:translateY(0)}.toast.ok{border-color:var(--green)}.toast.err{border-color:var(--fire)}
+/* Responsive */
+@media(max-width:900px){.side{transform:translateX(-100%)}.side.open{transform:translateX(0)}.content{margin-left:0}.body{padding:1rem}.stats{grid-template-columns:1fr 1fr}.form-row{grid-template-columns:1fr}.tb-search{width:160px}}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;padding:.3rem}
+@media(max-width:900px){.hamburger{display:block}}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<aside class="side" id="sidebar">
+  <div class="s-logo"><div class="s-logo-i">V</div><div><div class="s-logo-t">VAULTA</div><div class="s-logo-sub">Admin Panel</div></div></div>
+  <nav class="s-nav">
+    <div class="s-sec">Principal</div>
+    <button class="s-btn on" data-p="dash" onclick="goA('dash')"><span class="ico">📊</span>Dashboard</button>
+    <div class="s-sec">Gestion</div>
+    <button class="s-btn" data-p="stock" onclick="goA('stock')"><span class="ico">📦</span>Stocks & Produits</button>
+    <button class="s-btn" data-p="tcg" onclick="goA('tcg')"><span class="ico">🎴</span>TCG & Séries</button>
+    <button class="s-btn" data-p="orders" onclick="goA('orders')"><span class="ico">🚚</span>Commandes<span class="badge">3</span></button>
+    <button class="s-btn" data-p="mkt" onclick="goA('mkt')"><span class="ico">💱</span>Marché</button>
+    <div class="s-sec">Utilisateurs</div>
+    <button class="s-btn" data-p="users" onclick="goA('users')"><span class="ico">👥</span>Utilisateurs</button>
+    <button class="s-btn" data-p="support" onclick="goA('support')"><span class="ico">🎧</span>Support<span class="badge">5</span></button>
+    <div class="s-sec">Finance</div>
+    <button class="s-btn" data-p="finance" onclick="goA('finance')"><span class="ico">💰</span>Finance</button>
+    <div class="s-sec">Système</div>
+    <button class="s-btn" data-p="settings" onclick="goA('settings')"><span class="ico">⚙️</span>Paramètres</button>
+  </nav>
+  <div class="s-foot"><div class="s-av">A</div><div><div class="s-uname">Admin</div><div class="s-urole">Super Admin</div></div></div>
+</aside>
+<!-- MAIN -->
+<div class="content">
+  <div class="topbar">
+    <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <div class="tb-title" id="tbTitle">Dashboard</div>
+    <input class="tb-search" placeholder="Rechercher..." id="globalSearch">
+    <button class="tb-notif">🔔<span class="dot"></span></button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="pg on" id="p-dash"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Utilisateurs</div><div class="stat-val">1,247</div><div class="stat-chg up">↑ +12% ce mois</div><div class="stat-ico">👥</div></div>
+      <div class="stat s2"><div class="stat-label">Boosters ouverts</div><div class="stat-val">8,432</div><div class="stat-chg up">↑ +23% ce mois</div><div class="stat-ico">📦</div></div>
+      <div class="stat s3"><div class="stat-label">Chiffre d'affaires</div><div class="stat-val">46,320€</div><div class="stat-chg up">↑ +18%</div><div class="stat-ico">💰</div></div>
+      <div class="stat s4"><div class="stat-label">Tickets ouverts</div><div class="stat-val">5</div><div class="stat-chg dn">↑ +2 aujourd'hui</div><div class="stat-ico">🎧</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem">
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📈 Ventes (7 derniers jours)</div></div>
+        <div class="chart-bars" style="padding:1rem">
+          <div class="chart-bar" style="height:45%"><div class="chart-bar-lbl">Lun</div></div>
+          <div class="chart-bar" style="height:65%"><div class="chart-bar-lbl">Mar</div></div>
+          <div class="chart-bar" style="height:50%"><div class="chart-bar-lbl">Mer</div></div>
+          <div class="chart-bar" style="height:80%"><div class="chart-bar-lbl">Jeu</div></div>
+          <div class="chart-bar" style="height:70%"><div class="chart-bar-lbl">Ven</div></div>
+          <div class="chart-bar" style="height:100%"><div class="chart-bar-lbl">Sam</div></div>
+          <div class="chart-bar" style="height:90%"><div class="chart-bar-lbl">Dim</div></div>
+        </div>
+      </div>
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">🔥 Alertes</div></div>
+        <div class="alert alert-warn">⚠️ Stock bas : Forces Temporelles (6 restants)</div>
+        <div class="alert alert-info">ℹ️ 3 commandes en attente d'envoi</div>
+        <div class="alert alert-ok">✅ Paiement Stripe opérationnel</div>
+      </div>
+    </div>
+    <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">🕐 Activité récente</div></div>
+      <table class="tbl"><thead><tr><th>Heure</th><th>Action</th><th>Utilisateur</th><th>Détail</th></tr></thead><tbody>
+        <tr><td class="mono">14:32</td><td>Ouverture booster</td><td><span class="avatar-sm" style="background:var(--pri)">DM</span>DragonMaster</td><td>Flammes Obsidiennes ×2</td></tr>
+        <tr><td class="mono">14:28</td><td>Dépôt</td><td><span class="avatar-sm" style="background:var(--green)">PT</span>PsyTrainer</td><td class="mono" style="color:var(--green)">+25.00€</td></tr>
+        <tr><td class="mono">14:15</td><td>Vente marché</td><td><span class="avatar-sm" style="background:var(--amber)">IK</span>IceKing</td><td>Chien-Pao ex → 38.00€</td></tr>
+        <tr><td class="mono">13:55</td><td>Inscription</td><td><span class="avatar-sm" style="background:var(--sec)">NW</span>NewUser42</td><td>Nouvel utilisateur</td></tr>
+        <tr><td class="mono">13:40</td><td>Envoi demandé</td><td><span class="avatar-sm" style="background:var(--fire)">DF</span>DragonFan</td><td>3 cartes → Paris</td></tr>
+      </tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== STOCKS ===== -->
+  <div class="pg" id="p-stock"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Boosters en stock</div><div class="stat-val" id="totalStock">107</div><div class="stat-ico">📦</div></div>
+      <div class="stat s2"><div class="stat-label">Valeur stock</div><div class="stat-val">588.50€</div><div class="stat-ico">💎</div></div>
+      <div class="stat s3"><div class="stat-label">Sets actifs</div><div class="stat-val">6</div><div class="stat-ico">🎴</div></div>
+      <div class="stat s4"><div class="stat-label">Alertes stock</div><div class="stat-val">2</div><div class="stat-ico">⚠️</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📦 Gestion des stocks</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="stockTCGFilter" onchange="renderStock()"><option value="all">Tous les TCG</option><option value="Pokémon">Pokémon</option><option value="One Piece">One Piece</option><option value="Yu-Gi-Oh!">Yu-Gi-Oh!</option><option value="Dragon Ball">Dragon Ball</option><option value="Magic">Magic</option></select>
+        <button class="btn pri" onclick="openModal('addProd')">+ Ajouter un produit</button>
+      </div></div>
+      <table class="tbl" id="stockTable"><thead><tr><th>Produit</th><th>TCG</th><th>Série</th><th>Prix</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+    </div>
+  </div></div>
+
+  <!-- ===== TCG & SERIES ===== -->
+  <div class="pg" id="p-tcg"><div class="body">
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🎴 Franchises TCG</div><div class="pnl-acts"><button class="btn pri" onclick="openModal('addTCG')">+ Ajouter TCG</button></div></div>
+      <table class="tbl"><thead><tr><th>TCG</th><th>Séries</th><th>Produits</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr><td><strong>Pokémon</strong></td><td class="mono">1 série</td><td class="mono">6 produits</td><td><span class="chip chip-ok">Actif</span></td><td><button class="btn" onclick="toast('Modifier Pokémon','ok')">✏️</button></td></tr>
+        <tr><td style="color:var(--dim)">One Piece</td><td class="mono">0</td><td class="mono">0</td><td><span class="chip chip-warn">Bientôt</span></td><td><button class="btn" onclick="toast('En préparation','ok')">⏳</button></td></tr>
+        <tr><td style="color:var(--dim)">Yu-Gi-Oh!</td><td class="mono">0</td><td class="mono">0</td><td><span class="chip chip-warn">Bientôt</span></td><td><button class="btn">⏳</button></td></tr>
+        <tr><td style="color:var(--dim)">Dragon Ball</td><td class="mono">0</td><td class="mono">0</td><td><span class="chip chip-warn">Planifié</span></td><td><button class="btn">⏳</button></td></tr>
+        <tr><td style="color:var(--dim)">Magic: The Gathering</td><td class="mono">0</td><td class="mono">0</td><td><span class="chip chip-warn">Planifié</span></td><td><button class="btn">⏳</button></td></tr>
+      </tbody></table>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📚 Séries — Pokémon</div><div class="pnl-acts"><button class="btn pri" onclick="openModal('addSeries')">+ Ajouter Série</button></div></div>
+      <table class="tbl"><thead><tr><th>Série</th><th>Sets</th><th>Cartes totales</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr><td><strong>Écarlate & Violet</strong></td><td class="mono">6</td><td class="mono">72 cartes</td><td><span class="chip chip-ok">Active</span></td><td><div class="pnl-acts"><button class="btn" onclick="toast('Modifier la série','ok')">✏️</button><button class="btn red">🗑️</button></div></td></tr>
+      </tbody></table>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🃏 Sets — Écarlate & Violet</div></div>
+      <table class="tbl"><thead><tr><th>Set</th><th>Cartes</th><th>Prix booster</th><th>Stock</th></tr></thead><tbody id="setsBody"></tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== ORDERS ===== -->
+  <div class="pg" id="p-orders"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">En attente</div><div class="stat-val">3</div><div class="stat-ico">⏳</div></div>
+      <div class="stat s2"><div class="stat-label">Expédiées</div><div class="stat-val">156</div><div class="stat-ico">📮</div></div>
+      <div class="stat s3"><div class="stat-label">Livrées</div><div class="stat-val">142</div><div class="stat-ico">✅</div></div>
+      <div class="stat s4"><div class="stat-label">Litiges</div><div class="stat-val">1</div><div class="stat-ico">⚠️</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🚚 Commandes d'envoi</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem"><option>Toutes</option><option>En attente</option><option>Expédiées</option><option>Livrées</option></select>
+      </div></div>
+      <table class="tbl"><thead><tr><th>Réf</th><th>Client</th><th>Cartes</th><th>Adresse</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr><td class="mono">CMD-2841</td><td><span class="avatar-sm" style="background:var(--fire)">DF</span>DragonFan</td><td class="mono">3</td><td>12 Rue Rivoli, Paris</td><td class="mono">25/02/26</td><td><span class="chip chip-warn">En attente</span></td><td><div class="pnl-acts"><button class="btn grn" onclick="toast('Commande marquée comme expédiée','ok')">📮 Expédier</button></div></td></tr>
+        <tr><td class="mono">CMD-2840</td><td><span class="avatar-sm" style="background:var(--pri)">DM</span>DragonMaster</td><td class="mono">5</td><td>45 Av. Foch, Lyon</td><td class="mono">24/02/26</td><td><span class="chip chip-warn">En attente</span></td><td><div class="pnl-acts"><button class="btn grn" onclick="toast('Commande marquée comme expédiée','ok')">📮 Expédier</button></div></td></tr>
+        <tr><td class="mono">CMD-2839</td><td><span class="avatar-sm" style="background:var(--amber)">IK</span>IceKing</td><td class="mono">1</td><td>8 Bd Haussmann, Paris</td><td class="mono">24/02/26</td><td><span class="chip chip-warn">En attente</span></td><td><div class="pnl-acts"><button class="btn grn" onclick="toast('Commande marquée comme expédiée','ok')">📮 Expédier</button></div></td></tr>
+        <tr><td class="mono">CMD-2838</td><td><span class="avatar-sm" style="background:var(--green)">PT</span>PsyTrainer</td><td class="mono">2</td><td>22 Rue Molière, Marseille</td><td class="mono">23/02/26</td><td><span class="chip chip-ok">Expédiée</span></td><td><div class="pnl-acts"><button class="btn" onclick="toast('Suivi: LV123456789FR','ok')">🔍 Suivi</button></div></td></tr>
+      </tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== MARKETPLACE ===== -->
+  <div class="pg" id="p-mkt"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Annonces actives</div><div class="stat-val">34</div><div class="stat-ico">💱</div></div>
+      <div class="stat s2"><div class="stat-label">Volume 30j</div><div class="stat-val">2,847€</div><div class="stat-ico">📊</div></div>
+      <div class="stat s3"><div class="stat-label">Commissions 30j</div><div class="stat-val">227.76€</div><div class="stat-ico">💎</div></div>
+      <div class="stat s4"><div class="stat-label">Signalements</div><div class="stat-val">0</div><div class="stat-ico">🚩</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">💱 Annonces en cours</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem"><option>Toutes</option><option>Mises en avant</option><option>Signalées</option></select></div></div>
+      <table class="tbl"><thead><tr><th>Carte</th><th>Vendeur</th><th>Prix</th><th>Réf booster</th><th>Mise en avant</th><th>Actions</th></tr></thead><tbody>
+        <tr><td><strong>Charizard ex</strong> <span class="chip chip-sec">Secret</span></td><td>@DragonMaster</td><td class="mono" style="color:var(--green)">42.00€</td><td class="mono">VLT-X7K2-4201</td><td><span class="chip chip-ok">⭐ Oui</span></td><td><div class="pnl-acts"><button class="btn">✏️</button><button class="btn red">🗑️</button></div></td></tr>
+        <tr><td><strong>Mew ex</strong> <span class="chip chip-sec">Secret</span></td><td>@PsyTrainer</td><td class="mono" style="color:var(--green)">50.00€</td><td class="mono">VLT-M3W1-3892</td><td><span class="chip chip-ok">⭐ Oui</span></td><td><div class="pnl-acts"><button class="btn">✏️</button><button class="btn red">🗑️</button></div></td></tr>
+        <tr><td><strong>Pikachu</strong> <span class="chip chip-info">Commune</span></td><td>@StarterPack</td><td class="mono" style="color:var(--green)">0.80€</td><td class="mono">VLT-PKA1-6644</td><td><span class="chip" style="background:var(--bg-s);color:var(--dim)">Non</span></td><td><div class="pnl-acts"><button class="btn">✏️</button><button class="btn red">🗑️</button></div></td></tr>
+      </tbody></table>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">⚙️ Paramètres Marché</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Commission (%)</div><input class="form-inp" type="number" value="8" min="0" max="100"></div><div class="form-grp"><div class="form-lbl">Mise en avant (€/jour)</div><input class="form-inp" type="number" value="2.50" step="0.01"></div></div>
+      <div style="padding:0 1rem .8rem"><button class="btn pri" onclick="toast('Paramètres sauvegardés','ok')">💾 Sauvegarder</button></div>
+    </div>
+  </div></div>
+
+  <!-- ===== USERS ===== -->
+  <div class="pg" id="p-users"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Total inscrits</div><div class="stat-val">1,247</div><div class="stat-ico">👥</div></div>
+      <div class="stat s2"><div class="stat-label">Actifs (30j)</div><div class="stat-val">892</div><div class="stat-ico">🟢</div></div>
+      <div class="stat s3"><div class="stat-label">Dépôts totaux</div><div class="stat-val">34,210€</div><div class="stat-ico">💰</div></div>
+      <div class="stat s4"><div class="stat-label">Bannis</div><div class="stat-val">3</div><div class="stat-ico">🚫</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">👥 Gestion des utilisateurs</div><div class="pnl-acts">
+        <input class="tb-search" placeholder="Rechercher un utilisateur..." style="width:200px">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem"><option>Tous</option><option>Actifs</option><option>Bannis</option><option>Premium</option></select>
+      </div></div>
+      <table class="tbl"><thead><tr><th>Utilisateur</th><th>Email</th><th>Inscrit</th><th>Solde</th><th>Cartes</th><th>XP</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr><td><span class="avatar-sm" style="background:var(--pri)">DM</span><strong>DragonMaster</strong></td><td class="mono" style="font-size:.72rem">dragon@mail.com</td><td class="mono">15/01/26</td><td class="mono" style="color:var(--gold)">124.50€</td><td class="mono">47</td><td><span class="chip chip-sec">Lvl 8</span></td><td><span class="chip chip-ok">Actif</span></td><td><div class="pnl-acts"><button class="btn" onclick="openModal('editUser')">✏️</button><button class="btn red" onclick="toast('Utilisateur banni','err')">🚫</button></div></td></tr>
+        <tr><td><span class="avatar-sm" style="background:var(--green)">PT</span><strong>PsyTrainer</strong></td><td class="mono" style="font-size:.72rem">psy@mail.com</td><td class="mono">22/01/26</td><td class="mono" style="color:var(--gold)">89.20€</td><td class="mono">32</td><td><span class="chip chip-info">Lvl 5</span></td><td><span class="chip chip-ok">Actif</span></td><td><div class="pnl-acts"><button class="btn" onclick="openModal('editUser')">✏️</button><button class="btn red">🚫</button></div></td></tr>
+        <tr><td><span class="avatar-sm" style="background:var(--amber)">IK</span><strong>IceKing</strong></td><td class="mono" style="font-size:.72rem">ice@mail.com</td><td class="mono">05/02/26</td><td class="mono" style="color:var(--gold)">210.00€</td><td class="mono">18</td><td><span class="chip chip-info">Lvl 4</span></td><td><span class="chip chip-ok">Actif</span></td><td><div class="pnl-acts"><button class="btn">✏️</button><button class="btn red">🚫</button></div></td></tr>
+        <tr><td><span class="avatar-sm" style="background:var(--fire)">DF</span><strong>DragonFan</strong></td><td class="mono" style="font-size:.72rem">dfan@mail.com</td><td class="mono">10/02/26</td><td class="mono" style="color:var(--gold)">15.30€</td><td class="mono">8</td><td><span class="chip" style="background:var(--bg-s);color:var(--dim)">Lvl 1</span></td><td><span class="chip chip-ok">Actif</span></td><td><div class="pnl-acts"><button class="btn">✏️</button><button class="btn red">🚫</button></div></td></tr>
+        <tr><td><span class="avatar-sm" style="background:#555">TX</span><strong>ToxicUser</strong></td><td class="mono" style="font-size:.72rem">toxic@mail.com</td><td class="mono">01/02/26</td><td class="mono">0.00€</td><td class="mono">0</td><td><span class="chip" style="background:var(--bg-s);color:var(--dim)">Lvl 0</span></td><td><span class="chip chip-err">Banni</span></td><td><div class="pnl-acts"><button class="btn grn" onclick="toast('Utilisateur débanni','ok')">✅ Débannir</button></div></td></tr>
+      </tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== SUPPORT ===== -->
+  <div class="pg" id="p-support"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Tickets ouverts</div><div class="stat-val">5</div><div class="stat-ico">📩</div></div>
+      <div class="stat s2"><div class="stat-label">En traitement</div><div class="stat-val">2</div><div class="stat-ico">⏳</div></div>
+      <div class="stat s3"><div class="stat-label">Résolus (30j)</div><div class="stat-val">48</div><div class="stat-ico">✅</div></div>
+      <div class="stat s4"><div class="stat-label">Temps moyen</div><div class="stat-val">2.4h</div><div class="stat-ico">⏱️</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🎧 Tickets de support</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem"><option>Tous</option><option>Ouverts</option><option>En traitement</option><option>Résolus</option></select></div></div>
+      <table class="tbl"><thead><tr><th>ID</th><th>Utilisateur</th><th>Sujet</th><th>Catégorie</th><th>Priorité</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr><td class="mono">#TK-412</td><td>@DragonFan</td><td>Carte non reçue</td><td><span class="chip chip-info">Envoi</span></td><td><span class="chip chip-err">Urgent</span></td><td class="mono">25/02</td><td><span class="chip chip-warn">Ouvert</span></td><td><button class="btn pri" onclick="openModal('ticket')">📝 Répondre</button></td></tr>
+        <tr><td class="mono">#TK-411</td><td>@PsyTrainer</td><td>Problème de dépôt</td><td><span class="chip chip-info">Paiement</span></td><td><span class="chip chip-warn">Moyen</span></td><td class="mono">25/02</td><td><span class="chip chip-warn">Ouvert</span></td><td><button class="btn pri" onclick="openModal('ticket')">📝 Répondre</button></td></tr>
+        <tr><td class="mono">#TK-410</td><td>@NewUser42</td><td>Comment fonctionne le recyclage ?</td><td><span class="chip chip-info">Question</span></td><td><span class="chip chip-ok">Bas</span></td><td class="mono">24/02</td><td><span class="chip chip-ok">En traitement</span></td><td><button class="btn" onclick="openModal('ticket')">📝 Voir</button></td></tr>
+        <tr><td class="mono">#TK-409</td><td>@IceKing</td><td>Carte endommagée à la réception</td><td><span class="chip chip-info">Qualité</span></td><td><span class="chip chip-err">Urgent</span></td><td class="mono">24/02</td><td><span class="chip chip-warn">Ouvert</span></td><td><button class="btn pri" onclick="openModal('ticket')">📝 Répondre</button></td></tr>
+        <tr><td class="mono">#TK-408</td><td>@DragonMaster</td><td>Suggestion: Ajout Yu-Gi-Oh</td><td><span class="chip chip-info">Suggestion</span></td><td><span class="chip chip-ok">Bas</span></td><td class="mono">23/02</td><td><span class="chip chip-warn">Ouvert</span></td><td><button class="btn" onclick="openModal('ticket')">📝 Voir</button></td></tr>
+      </tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== FINANCE ===== -->
+  <div class="pg" id="p-finance"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">CA total</div><div class="stat-val">46,320€</div><div class="stat-ico">💰</div></div>
+      <div class="stat s2"><div class="stat-label">Commissions marché</div><div class="stat-val">3,412€</div><div class="stat-ico">💱</div></div>
+      <div class="stat s3"><div class="stat-label">Frais envoi perçus</div><div class="stat-val">1,235€</div><div class="stat-ico">📦</div></div>
+      <div class="stat s4"><div class="stat-label">Marge nette</div><div class="stat-val">12,847€</div><div class="stat-ico">📈</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📥 Revenus</div></div>
+        <div style="padding:.8rem 1rem;display:flex;flex-direction:column;gap:.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Ventes de boosters</span><span class="mono" style="color:var(--green)">38,720€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Commissions marché (8%)</span><span class="mono" style="color:var(--green)">3,412€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Frais d'envoi</span><span class="mono" style="color:var(--green)">1,235€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Mises en avant marché</span><span class="mono" style="color:var(--green)">2,953€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:.5rem;margin-top:.2rem"><strong>Total</strong><strong class="mono" style="color:var(--gold);font-size:1.1rem">46,320€</strong></div>
+        </div>
+      </div>
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📤 Dépenses</div></div>
+        <div style="padding:.8rem 1rem;display:flex;flex-direction:column;gap:.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Achat boosters (fournisseurs)</span><span class="mono" style="color:var(--fire)">-24,100€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Frais Stripe (~2.9%)</span><span class="mono" style="color:var(--fire)">-1,343€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Hébergement & infra</span><span class="mono" style="color:var(--fire)">-450€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Frais d'envoi réels</span><span class="mono" style="color:var(--fire)">-6,280€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem">Recyclages (crédit)</span><span class="mono" style="color:var(--fire)">-1,300€</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:.5rem;margin-top:.2rem"><strong>Total dépenses</strong><strong class="mono" style="color:var(--fire);font-size:1.1rem">-33,473€</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📋 Dernières transactions</div></div>
+      <table class="tbl"><thead><tr><th>Date</th><th>Type</th><th>Utilisateur</th><th>Montant</th><th>Méthode</th></tr></thead><tbody>
+        <tr><td class="mono">25/02 14:32</td><td>Achat booster</td><td>@DragonMaster</td><td class="mono" style="color:var(--green)">+11.00€</td><td>Solde</td></tr>
+        <tr><td class="mono">25/02 14:28</td><td>Dépôt</td><td>@PsyTrainer</td><td class="mono" style="color:var(--green)">+25.00€</td><td>Stripe</td></tr>
+        <tr><td class="mono">25/02 14:15</td><td>Commission marché</td><td>@IceKing</td><td class="mono" style="color:var(--green)">+3.04€</td><td>Auto</td></tr>
+        <tr><td class="mono">25/02 13:55</td><td>Envoi</td><td>@DragonFan</td><td class="mono" style="color:var(--green)">+4.99€</td><td>Solde</td></tr>
+      </tbody></table>
+    </div>
+  </div></div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div class="pg" id="p-settings"><div class="body">
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">⚙️ Paramètres généraux</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Nom du site</div><input class="form-inp" value="Vaulta Club"></div><div class="form-grp"><div class="form-lbl">Domaine</div><input class="form-inp" value="vaultaclub.com"></div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Email de contact</div><input class="form-inp" value="contact@vaultaclub.com"></div><div class="form-grp"><div class="form-lbl">Email support</div><input class="form-inp" value="support@vaultaclub.com"></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">💳 Paiement</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Clé Stripe (live)</div><input class="form-inp" type="password" value="sk_live_xxxxxxxxxxxx"></div><div class="form-grp"><div class="form-lbl">Clé Stripe (test)</div><input class="form-inp" type="password" value="sk_test_xxxxxxxxxxxx"></div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Mode</div><select class="form-inp"><option>🟢 Production</option><option>🟡 Test</option></select></div><div class="form-grp"><div class="form-lbl">Devise</div><select class="form-inp"><option>EUR (€)</option><option>USD ($)</option></select></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📦 Envoi</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Frais d'envoi (€)</div><input class="form-inp" type="number" value="4.99" step="0.01"></div><div class="form-grp"><div class="form-lbl">Envoi gratuit dès (€)</div><input class="form-inp" type="number" value="0" step="1" placeholder="0 = désactivé"></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">♻️ Recyclage</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Taux de recyclage (%)</div><input class="form-inp" type="number" value="40" min="0" max="100"></div><div class="form-grp"><div class="form-lbl">Recyclage activé</div><select class="form-inp"><option>✅ Oui</option><option>❌ Non</option></select></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🔐 Sécurité</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Inscription ouverte</div><select class="form-inp"><option>✅ Oui</option><option>❌ Non (invitation)</option></select></div><div class="form-grp"><div class="form-lbl">Vérification email</div><select class="form-inp"><option>✅ Obligatoire</option><option>Optionnelle</option></select></div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Maintenance</div><select class="form-inp"><option>🟢 Désactivée</option><option>🔴 Activée</option></select></div><div class="form-grp"><div class="form-lbl">Message maintenance</div><input class="form-inp" placeholder="Nous revenons bientôt..."></div></div>
+    </div>
+    <div style="padding:0 0 1rem"><button class="btn pri" onclick="toast('Tous les paramètres sauvegardés !','ok')" style="font-size:.9rem;padding:.6rem 1.5rem">💾 Sauvegarder tous les paramètres</button></div>
+  </div></div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="addProdModal">
+  <div class="modal"><button class="modal-close" onclick="closeModal('addProdModal')">×</button>
+    <h2>📦 Ajouter un produit</h2>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">TCG</div><select class="form-inp"><option>Pokémon</option></select></div><div class="form-grp"><div class="form-lbl">Série</div><select class="form-inp"><option>Écarlate & Violet</option></select></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Nom du set</div><input class="form-inp" placeholder="Ex: Flammes Obsidiennes"></div><div class="form-grp"><div class="form-lbl">Prix booster (€)</div><input class="form-inp" type="number" step="0.01" placeholder="5.50"></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Cartes par booster</div><input class="form-inp" type="number" value="10"></div><div class="form-grp"><div class="form-lbl">Stock initial</div><input class="form-inp" type="number" placeholder="100"></div></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Réf vidéo booster IRL</div><input class="form-inp" placeholder="Référence unique du booster physique"></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('addProdModal')">Annuler</button><button class="btn pri" onclick="toast('Produit ajouté !','ok');closeModal('addProdModal')">Ajouter</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="addTCGModal">
+  <div class="modal"><button class="modal-close" onclick="closeModal('addTCGModal')">×</button>
+    <h2>🎴 Ajouter un TCG</h2>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Nom de la franchise</div><input class="form-inp" placeholder="Ex: One Piece Card Game"></div></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Description</div><textarea class="form-inp" placeholder="Description courte..."></textarea></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('addTCGModal')">Annuler</button><button class="btn pri" onclick="toast('TCG ajouté !','ok');closeModal('addTCGModal')">Ajouter</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="addSeriesModal">
+  <div class="modal"><button class="modal-close" onclick="closeModal('addSeriesModal')">×</button>
+    <h2>📚 Ajouter une série</h2>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">TCG</div><select class="form-inp"><option>Pokémon</option></select></div><div class="form-grp"><div class="form-lbl">Nom de la série</div><input class="form-inp" placeholder="Ex: Noir & Blanc"></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('addSeriesModal')">Annuler</button><button class="btn pri" onclick="toast('Série ajoutée !','ok');closeModal('addSeriesModal')">Ajouter</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="editUserModal">
+  <div class="modal"><button class="modal-close" onclick="closeModal('editUserModal')">×</button>
+    <h2>✏️ Modifier l'utilisateur</h2>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Pseudo</div><input class="form-inp" value="DragonMaster"></div><div class="form-grp"><div class="form-lbl">Email</div><input class="form-inp" value="dragon@mail.com"></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Rôle</div><select class="form-inp"><option>Utilisateur</option><option>Modérateur</option><option>Admin</option></select></div><div class="form-grp"><div class="form-lbl">Solde (€)</div><input class="form-inp" type="number" value="124.50"></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Status</div><select class="form-inp"><option>Actif</option><option>Suspendu</option><option>Banni</option></select></div><div class="form-grp"><div class="form-lbl">Niveau XP</div><input class="form-inp" type="number" value="8"></div></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Note admin</div><textarea class="form-inp" placeholder="Note interne..."></textarea></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('editUserModal')">Annuler</button><button class="btn pri" onclick="toast('Utilisateur modifié','ok');closeModal('editUserModal')">Sauvegarder</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="ticketModal">
+  <div class="modal"><button class="modal-close" onclick="closeModal('ticketModal')">×</button>
+    <h2>📝 Ticket #TK-412</h2>
+    <div style="background:var(--bg-s);border-radius:8px;padding:.7rem;margin-bottom:.7rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><strong style="font-size:.85rem">@DragonFan</strong><span class="mono" style="font-size:.7rem;color:var(--dim)">25/02/26 10:15</span></div>
+      <p style="font-size:.82rem;color:var(--text2)">Bonjour, j'ai commandé 3 cartes il y a 5 jours (CMD-2841) et je n'ai toujours rien reçu. Pouvez-vous vérifier le suivi ?</p>
+    </div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Réponse</div><textarea class="form-inp" placeholder="Tapez votre réponse..."></textarea></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Status</div><select class="form-inp"><option>En traitement</option><option>Résolu</option><option>En attente client</option></select></div><div class="form-grp"><div class="form-lbl">Priorité</div><select class="form-inp"><option>Urgent</option><option>Moyen</option><option>Bas</option></select></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('ticketModal')">Annuler</button><button class="btn pri" onclick="toast('Réponse envoyée','ok');closeModal('ticketModal')">📨 Envoyer</button></div>
+  </div>
+</div>
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="tI"></span><span id="tT"></span></div>
+
+<script>
+const products=[
+  {name:'Flammes Obsidiennes',tcg:'Pokémon',series:'Écarlate & Violet',price:5.50,stock:24,cards:12},
+  {name:'Évolutions à Paldea',tcg:'Pokémon',series:'Écarlate & Violet',price:5.50,stock:15,cards:9},
+  {name:'151',tcg:'Pokémon',series:'Écarlate & Violet',price:6.90,stock:12,cards:10},
+  {name:'Faille Paradoxe',tcg:'Pokémon',series:'Écarlate & Violet',price:5.50,stock:20,cards:8},
+  {name:'Forces Temporelles',tcg:'Pokémon',series:'Écarlate & Violet',price:5.50,stock:6,cards:7},
+  {name:'Masque Crépusculaire',tcg:'Pokémon',series:'Écarlate & Violet',price:5.50,stock:30,cards:7}
+];
+function goA(pg){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+pg).classList.add('on');
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.toggle('on',b.dataset.p===pg));
+  const titles={dash:'Dashboard',stock:'Stocks & Produits',tcg:'TCG & Séries',orders:'Commandes',mkt:'Marché',users:'Utilisateurs',support:'Support',finance:'Finance',settings:'Paramètres'};
+  document.getElementById('tbTitle').textContent=titles[pg]||'Dashboard';
+  document.getElementById('sidebar').classList.remove('open');
+  if(pg==='stock')renderStock();if(pg==='tcg')renderSets();
+}
+function renderStock(){
+  const filt=document.getElementById('stockTCGFilter').value;
+  const filtered=filt==='all'?products:products.filter(p=>p.tcg===filt);
+  document.getElementById('stockBody').innerHTML=filtered.map(p=>{
+    const ri=products.indexOf(p);
+    const sc=p.stock>10?'chip-ok':p.stock>3?'chip-warn':'chip-err';
+    const sl=p.stock>10?'En stock':p.stock>3?'Stock bas':'Critique';
+    return `<tr><td><strong>${p.name}</strong></td><td>${p.tcg}</td><td>${p.series}</td><td class="mono" style="color:var(--gold)">${p.price.toFixed(2)}€</td><td class="mono">${p.stock}</td><td><span class="chip ${sc}">${sl}</span></td><td><div class="pnl-acts">
+      <button class="btn red" onclick="adjStock(${ri},-1)">-1</button>
+      <button class="btn" onclick="adjStock(${ri},-5)">-5</button>
+      <button class="btn" onclick="adjStock(${ri},+1)">+1</button>
+      <button class="btn grn" onclick="adjStock(${ri},+10)">+10</button>
+      <button class="btn amb" onclick="editProdPrice(${ri})">✏️</button>
+    </div></td></tr>`}).join('');
+  document.getElementById('totalStock').textContent=filtered.reduce((s,p)=>s+p.stock,0);
+}
+function adjStock(i,d){products[i].stock=Math.max(0,products[i].stock+d);renderStock();toast(`Stock ${d>0?'+':'' }${d} pour ${products[i].name}`,'ok')}
+function editProdPrice(i){const np=prompt(`Nouveau prix pour ${products[i].name} (actuel: ${products[i].price}€):`,products[i].price);if(np&&!isNaN(np)){products[i].price=parseFloat(np);renderStock();toast(`Prix mis à jour: ${products[i].price.toFixed(2)}€`,'ok')}}
+function renderSets(){
+  document.getElementById('setsBody').innerHTML=products.map(p=>`<tr><td><strong>${p.name}</strong></td><td class="mono">${p.cards}</td><td class="mono" style="color:var(--gold)">${p.price.toFixed(2)}€</td><td class="mono">${p.stock}</td></tr>`).join('');
+}
+function openModal(id){document.getElementById(id+'Modal').classList.add('on')}
+function closeModal(id){document.getElementById(id).classList.remove('on')}
+function toast(msg,type='ok'){const t=document.getElementById('toast');document.getElementById('tI').textContent=type==='ok'?'✅':'❌';document.getElementById('tT').textContent=msg;t.className='toast '+type+' on';setTimeout(()=>t.classList.remove('on'),3500)}
+// Init
+renderStock();
+</script>
+</body>
+</html>

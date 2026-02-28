@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vaulta Club — Administration</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+:root{--bg:#06060c;--bg-card:#0c0c18;--bg-s:#111124;--bg-e:#1a1a32;--bg-h:#222244;--pri:#6366f1;--pri-l:#818cf8;--sec:#7c3aed;--acc:#a78bfa;--gold:#fbbf24;--fire:#ef4444;--green:#34d399;--cyan:#22d3ee;--amber:#f59e0b;--text:#e8e8f0;--text2:#9898b8;--dim:#5a5a78;--border:#1e1e3a;--r:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Chakra Petch',sans-serif;display:flex;min-height:100vh}
+::selection{background:var(--pri);color:#fff}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* Sidebar */
+.side{width:240px;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s}
+.s-logo{padding:1.2rem 1rem;display:flex;align-items:center;gap:.6rem;border-bottom:1px solid var(--border)}
+.s-logo-i{width:34px;height:34px;background:linear-gradient(135deg,var(--pri),var(--sec));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Exo 2';font-weight:900;font-size:.9rem;color:#fff}
+.s-logo-t{font-family:'Exo 2';font-weight:900;font-size:1rem;letter-spacing:2px;background:linear-gradient(135deg,var(--pri-l),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.s-logo-sub{font-size:.5rem;color:var(--amber);letter-spacing:3px;text-transform:uppercase;font-weight:700}
+.s-nav{flex:1;padding:.8rem .5rem;overflow-y:auto;display:flex;flex-direction:column;gap:.15rem}
+.s-sec{font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:2.5px;padding:.8rem .7rem .3rem;font-weight:700}
+.s-btn{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-radius:8px;cursor:pointer;transition:.2s;font-size:.82rem;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left}
+.s-btn:hover{background:var(--bg-s);color:var(--text)}.s-btn.on{background:rgba(99,102,241,.1);color:var(--pri-l);font-weight:600}
+.s-btn .ico{font-size:1rem;width:22px;text-align:center;flex-shrink:0}
+.s-btn .badge{margin-left:auto;background:var(--fire);color:#fff;font-family:'JetBrains Mono';font-size:.55rem;font-weight:700;padding:.1rem .4rem;border-radius:50px;min-width:18px;text-align:center}
+.s-foot{padding:1rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:.5rem}
+.s-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--fire));display:flex;align-items:center;justify-content:center;font-family:'Exo 2';font-weight:800;font-size:.7rem;color:#fff}
+.s-uname{font-size:.78rem;font-weight:600}.s-urole{font-size:.55rem;color:var(--amber)}
+.s-back{display:flex;align-items:center;gap:.5rem;padding:.5rem .7rem;margin:.3rem .5rem;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text2);font-family:'Chakra Petch';font-size:.75rem;cursor:pointer;transition:.2s;text-decoration:none}
+.s-back:hover{background:var(--bg-s);color:var(--text);border-color:var(--pri)}
+/* Main */
+.content{margin-left:240px;flex:1;min-height:100vh}
+.topbar{height:56px;background:rgba(6,6,12,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;gap:1rem;position:sticky;top:0;z-index:40}
+.tb-title{font-family:'Exo 2';font-weight:800;font-size:1.1rem;flex:1}
+.tb-search{background:var(--bg-s);border:1px solid var(--border);border-radius:8px;padding:.35rem .8rem;color:var(--text);font-family:'Chakra Petch';font-size:.82rem;width:280px;outline:none;transition:border .2s}
+.tb-search:focus{border-color:var(--pri)}
+.tb-notif{position:relative;background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer;padding:.3rem}.tb-notif:hover{color:var(--text)}
+.tb-notif .dot{position:absolute;top:2px;right:2px;width:7px;height:7px;background:var(--fire);border-radius:50%;border:1.5px solid var(--bg)}
+.body{padding:1.5rem;max-width:1400px}
+/* Cards & Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1rem;position:relative;overflow:hidden;transition:.3s}
+.stat:hover{border-color:var(--pri);transform:translateY(-2px)}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat.s1::before{background:linear-gradient(90deg,var(--pri),var(--acc))}.stat.s2::before{background:linear-gradient(90deg,var(--green),var(--cyan))}.stat.s3::before{background:linear-gradient(90deg,var(--amber),var(--gold))}.stat.s4::before{background:linear-gradient(90deg,var(--fire),var(--amber))}
+.stat-label{font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--dim);font-weight:600}
+.stat-val{font-family:'JetBrains Mono';font-weight:700;font-size:1.6rem;margin:.2rem 0 .1rem}
+.stat-chg{font-size:.7rem;font-family:'JetBrains Mono'}
+.stat-chg.up{color:var(--green)}.stat-chg.dn{color:var(--fire)}
+.stat-ico{position:absolute;top:.8rem;right:.8rem;font-size:1.3rem;opacity:.4}
+/* Panel */
+.pnl{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1.2rem;overflow:hidden}
+.pnl-hd{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:.4rem}
+.pnl-tt{font-family:'Exo 2';font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
+.pnl-acts{display:flex;gap:.3rem;flex-wrap:wrap}
+.btn{background:var(--bg-s);border:1px solid var(--border);color:var(--text);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;padding:.4rem .8rem;border-radius:7px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:.35rem;white-space:nowrap}
+.btn:hover{border-color:var(--pri);background:var(--bg-h)}
+.btn.pri{background:linear-gradient(135deg,var(--pri),var(--sec));border:none;color:#fff}.btn.pri:hover{box-shadow:0 4px 15px rgba(99,102,241,.3)}
+.btn.grn{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:var(--green)}.btn.grn:hover{background:rgba(52,211,153,.2)}
+.btn.red{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--fire)}.btn.red:hover{background:rgba(239,68,68,.2)}
+.btn.amb{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--amber)}.btn.amb:hover{background:rgba(245,158,11,.2)}
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:600;padding:.6rem 1rem;border-bottom:1px solid var(--border)}
+.tbl td{padding:.65rem 1rem;border-bottom:1px solid rgba(30,30,58,.5);font-size:.82rem;vertical-align:middle}
+.tbl tr:hover td{background:rgba(99,102,241,.03)}
+.tbl .mono{font-family:'JetBrains Mono';font-size:.78rem}
+.chip{display:inline-block;font-size:.6rem;font-weight:700;padding:.15rem .5rem;border-radius:50px;text-transform:uppercase;letter-spacing:1px}
+.chip-ok{background:rgba(52,211,153,.12);color:var(--green)}.chip-warn{background:rgba(245,158,11,.12);color:var(--amber)}.chip-err{background:rgba(239,68,68,.12);color:var(--fire)}.chip-info{background:rgba(99,102,241,.12);color:var(--pri-l)}
+.chip-sec{background:rgba(167,139,250,.12);color:var(--acc)}
+.avatar-sm{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;margin-right:.4rem;vertical-align:middle}
+/* Forms */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;padding:.8rem 1rem}
+.form-row.full{grid-template-columns:1fr}
+.form-grp{display:flex;flex-direction:column;gap:.2rem}
+.form-lbl{font-size:.65rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:1.5px}
+.form-inp{background:var(--bg-s);border:1px solid var(--border);color:var(--text);font-family:'Chakra Petch';font-size:.85rem;padding:.5rem .7rem;border-radius:7px;outline:none;transition:border .2s}
+.form-inp:focus{border-color:var(--pri)}
+select.form-inp{cursor:pointer}
+textarea.form-inp{min-height:80px;resize:vertical}
+/* Chart */
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 1rem .8rem}
+.chart-bar{flex:1;background:linear-gradient(180deg,var(--pri),var(--sec));border-radius:4px 4px 0 0;min-width:20px;position:relative;transition:.3s}
+.chart-bar:hover{opacity:.8}
+.chart-bar-lbl{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:.5rem;color:var(--dim);white-space:nowrap}
+/* Alerts */
+.alert{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;margin:.6rem 1rem;border-radius:8px;font-size:.82rem}
+.alert-info{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);color:var(--pri-l)}
+.alert-warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);color:var(--amber)}
+.alert-ok{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15);color:var(--green)}
+/* Empty */
+.empty{text-align:center;padding:2.5rem;color:var(--dim)}
+.empty .ei{font-size:2rem;margin-bottom:.5rem}.empty .et{font-size:.9rem;color:var(--text2)}
+/* Pages */
+.pg{display:none;animation:fi .25s ease}.pg.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(4,4,8,.85);backdrop-filter:blur(10px);z-index:200;display:none;align-items:center;justify-content:center}.modal-bg.on{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:560px;width:92%;animation:fi .25s ease;max-height:90vh;overflow-y:auto}
+.modal h2{font-family:'Exo 2';font-weight:700;font-size:1rem;margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}
+.modal-close{float:right;background:none;border:none;color:var(--dim);font-size:1.2rem;cursor:pointer}.modal-close:hover{color:var(--text)}
+.modal-foot{display:flex;justify-content:flex-end;gap:.4rem;margin-top:1rem}
+/* Toast */
+.toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--bg-e);border:1px solid var(--border);border-radius:var(--r);padding:.7rem 1.1rem;z-index:300;display:flex;align-items:center;gap:.5rem;transform:translateY(100px);transition:.4s cubic-bezier(.23,1,.32,1);font-size:.85rem;box-shadow:0 10px 35px rgba(0,0,0,.5)}
+.toast.on{transform:translateY(0)}.toast.ok{border-color:var(--green)}.toast.err{border-color:var(--fire)}
+/* Sync indicator */
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.3rem}
+.sync-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+.sync-dot.off{background:var(--fire);box-shadow:0 0 6px var(--fire)}
+/* Responsive */
+@media(max-width:900px){.side{transform:translateX(-100%)}.side.open{transform:translateX(0)}.content{margin-left:0}.body{padding:1rem}.stats{grid-template-columns:1fr 1fr}.form-row{grid-template-columns:1fr}.tb-search{width:160px}}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;padding:.3rem}
+@media(max-width:900px){.hamburger{display:block}}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<aside class="side" id="sidebar">
+  <div class="s-logo"><div class="s-logo-i">V</div><div><div class="s-logo-t">VAULTA</div><div class="s-logo-sub">Admin Panel</div></div></div>
+  <nav class="s-nav">
+    <a class="s-back" href="index.html">← Retour au site</a>
+    <div class="s-sec">Principal</div>
+    <button class="s-btn on" data-p="dash" onclick="goA('dash')"><span class="ico">📊</span>Dashboard</button>
+    <div class="s-sec">Gestion</div>
+    <button class="s-btn" data-p="stock" onclick="goA('stock')"><span class="ico">📦</span>Stocks & Produits</button>
+    <button class="s-btn" data-p="cards" onclick="goA('cards')"><span class="ico">🃏</span>Cartes</button>
+    <button class="s-btn" data-p="craft" onclick="goA('craft')"><span class="ico">🔧</span>Confection Boosters</button>
+    <button class="s-btn" data-p="tcg" onclick="goA('tcg')"><span class="ico">🎴</span>TCG & Séries</button>
+    <button class="s-btn" data-p="orders" onclick="goA('orders')"><span class="ico">🚚</span>Commandes<span class="badge" id="badgeOrders">0</span></button>
+    <button class="s-btn" data-p="mkt" onclick="goA('mkt')"><span class="ico">💱</span>Marché</button>
+    <div class="s-sec">Utilisateurs</div>
+    <button class="s-btn" data-p="users" onclick="goA('users')"><span class="ico">👥</span>Utilisateurs</button>
+    <button class="s-btn" data-p="support" onclick="goA('support')"><span class="ico">🎧</span>Support<span class="badge" id="badgeTickets">0</span></button>
+    <div class="s-sec">Finance</div>
+    <button class="s-btn" data-p="finance" onclick="goA('finance')"><span class="ico">💰</span>Finance</button>
+    <div class="s-sec">Système</div>
+    <button class="s-btn" data-p="settings" onclick="goA('settings')"><span class="ico">⚙️</span>Paramètres</button>
+  </nav>
+  <div class="s-foot"><div class="s-av">A</div><div><div class="s-uname">Admin</div><div class="s-urole">Super Admin</div></div></div>
+</aside>
+<!-- MAIN -->
+<div class="content">
+  <div class="topbar">
+    <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <div class="tb-title" id="tbTitle">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:var(--text2)"><span class="sync-dot ok" id="syncDot"></span><span id="syncLabel">Données synchronisées</span></div>
+    <button class="tb-notif" onclick="toggleNotifs()">🔔<span class="dot" id="notifDot" style="display:none"></span></button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="pg on" id="p-dash"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Utilisateurs</div><div class="stat-val" id="dashUsers">0</div><div class="stat-ico">👥</div></div>
+      <div class="stat s2"><div class="stat-label">Boosters en stock</div><div class="stat-val" id="dashStock">0</div><div class="stat-ico">📦</div></div>
+      <div class="stat s3"><div class="stat-label">Produits actifs</div><div class="stat-val" id="dashProds">0</div><div class="stat-ico">🎴</div></div>
+      <div class="stat s4"><div class="stat-label">Tickets ouverts</div><div class="stat-val" id="dashTickets">0</div><div class="stat-ico">🎧</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem">
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📊 Résumé des stocks</div></div>
+        <div id="dashStockSummary" style="padding:.5rem"></div>
+      </div>
+      <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">🔥 Alertes</div></div>
+        <div id="dashAlerts"></div>
+      </div>
+    </div>
+    <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">🕐 Activité récente</div></div>
+      <div id="dashActivity" style="padding:.5rem"></div>
+    </div>
+  </div></div>
+
+  <!-- ===== STOCKS ===== -->
+  <div class="pg" id="p-stock"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Boosters en stock</div><div class="stat-val" id="totalStock">0</div><div class="stat-ico">📦</div></div>
+      <div class="stat s2"><div class="stat-label">Valeur stock</div><div class="stat-val" id="stockValue">0€</div><div class="stat-ico">💎</div></div>
+      <div class="stat s3"><div class="stat-label">Produits actifs</div><div class="stat-val" id="stockProds">0</div><div class="stat-ico">🎴</div></div>
+      <div class="stat s4"><div class="stat-label">Alertes stock</div><div class="stat-val" id="stockAlerts">0</div><div class="stat-ico">⚠️</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📦 Gestion des stocks</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="stockTCGFilter" onchange="renderStock()"><option value="all">Tous les TCG</option></select>
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="stockSeriesFilter" onchange="renderStock()"><option value="all">Toutes les séries</option></select>
+        <button class="btn pri" onclick="openAddProd()">+ Ajouter un produit</button>
+        <button class="btn" onclick="refreshAllPools()" style="background:var(--vc-primary)">🔄 Rafraîchir tous les pools</button>
+        <button class="btn" onclick="syncAllPrices()" style="background:var(--vc-gold);color:#000">💰 Sync Prix Cardmarket</button>
+        <span id="priceSyncStatus" style="font-size:.7rem;color:var(--vc-text-dim);margin-left:8px"></span>
+      </div></div>
+      <table class="tbl"><thead><tr><th style="width:40px">Pos.</th><th>Produit</th><th>TCG</th><th>Série</th><th>Prix</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+    </div>
+  </div></div>
+
+  <!-- ===== CARDS BROWSER ===== -->
+  <div class="pg" id="p-cards"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Cartes totales</div><div class="stat-val" id="cardsTotal">0</div><div class="stat-ico">🃏</div></div>
+      <div class="stat s2"><div class="stat-label">Avec prix Cardmarket</div><div class="stat-val" id="cardsWithPrice">0</div><div class="stat-ico">📊</div></div>
+      <div class="stat s3"><div class="stat-label">Prix modifiés manuellement</div><div class="stat-val" id="cardsManual">0</div><div class="stat-ico">✏️</div></div>
+      <div class="stat s4"><div class="stat-label">Valeur totale du catalogue</div><div class="stat-val" id="cardsTotalVal">0€</div><div class="stat-ico">💰</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd">
+        <div class="pnl-tt">🃏 Navigateur de cartes</div>
+        <div class="pnl-acts">
+          <button class="btn sm" onclick="refreshAllPrices()">🔄 Rafraîchir les prix</button>
+        </div>
+      </div>
+      <!-- Filters -->
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;padding:.5rem;background:var(--bg2);border-radius:8px;margin-bottom:.5rem">
+        <select class="form-inp" id="cardFilterProd" onchange="renderCards()" style="flex:1;min-width:140px">
+          <option value="">Tous les sets</option>
+        </select>
+        <select class="form-inp" id="cardFilterRarity" onchange="renderCards()" style="flex:1;min-width:120px">
+          <option value="">Toutes raretés</option>
+          <option value="common">Commune</option>
+          <option value="uncommon">Peu commune</option>
+          <option value="rare">Rare</option>
+          <option value="ultra">Ultra Rare</option>
+          <option value="secret">Secrète</option>
+        </select>
+        <select class="form-inp" id="cardFilterSort" onchange="renderCards()" style="flex:1;min-width:120px">
+          <option value="num">N° carte</option>
+          <option value="name">Nom A-Z</option>
+          <option value="price-desc">Prix ↓</option>
+          <option value="price-asc">Prix ↑</option>
+          <option value="rarity">Rareté</option>
+        </select>
+        <input class="form-inp" id="cardFilterSearch" oninput="renderCards()" placeholder="🔍 Rechercher..." style="flex:1;min-width:150px">
+      </div>
+      <div style="font-size:.65rem;color:var(--text2);padding:0 .5rem .3rem">
+        <span id="cardsFilterCount">0</span> cartes affichées
+      </div>
+      <!-- Cards grid -->
+      <div id="cardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.5rem;padding:.5rem;max-height:65vh;overflow-y:auto"></div>
+    </div>
+  </div></div>
+
+  <!-- ===== TCG & SERIES ===== -->
+  <!-- ===== CONFECTION BOOSTERS ===== -->
+  <div class="pg" id="p-craft"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Boosters confectionnés</div><div class="stat-val" id="craftTotal">0</div><div class="stat-ico">🔧</div></div>
+      <div class="stat s2"><div class="stat-label">En attente d'achat</div><div class="stat-val" id="craftPending">0</div><div class="stat-ico">📦</div></div>
+      <div class="stat s3"><div class="stat-label">Distribués</div><div class="stat-val" id="craftSold">0</div><div class="stat-ico">✅</div></div>
+      <div class="stat s4"><div class="stat-label">Produits avec stock</div><div class="stat-val" id="craftProds">0</div><div class="stat-ico">🎴</div></div>
+    </div>
+
+    <!-- CRAFT FORM -->
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🔧 Nouveau Booster</div></div>
+      <div style="padding:1rem">
+        <div class="form-row">
+          <div class="form-grp"><div class="form-lbl">Produit</div>
+            <select class="form-inp" id="craftProd" onchange="onCraftProdChange()"></select>
+          </div>
+          <div class="form-grp"><div class="form-lbl">Ref. booster IRL (optionnel)</div>
+            <input class="form-inp" id="craftRef" placeholder="Ex: OBF-FR-20260226-001">
+          </div>
+        </div>
+
+        <!-- Card search -->
+        <div style="margin-top:.6rem">
+          <div class="form-lbl" style="margin-bottom:.3rem">Ajouter des cartes — Rechercher depuis le catalogue</div>
+          <div style="display:flex;gap:.4rem">
+            <input class="form-inp" id="craftSearch" placeholder="Tapez un nom de carte (ex: Dracaufeu, Pikachu...)" oninput="craftSearchCards()" autocomplete="off" style="flex:1">
+            <select class="form-inp" id="craftRarFilter" onchange="craftSearchCards()" style="width:140px">
+              <option value="all">Toute rareté</option>
+              <option value="common">Commune</option>
+              <option value="uncommon">Peu commune</option>
+              <option value="rare">Rare</option>
+              <option value="ultra">Ultra Rare</option>
+              <option value="secret">Secrète</option>
+            </select>
+          </div>
+          <!-- Search results -->
+          <div id="craftSearchResults" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:.4rem;max-height:240px;overflow-y:auto;margin-top:.5rem;padding:.3rem 0"></div>
+        </div>
+
+        <!-- Current booster cards -->
+        <div style="margin-top:.8rem">
+          <div class="form-lbl" style="margin-bottom:.3rem">📋 Cartes du booster (<span id="craftCount">0</span>/<span id="craftMax">10</span>)</div>
+          <div id="craftCards" style="display:flex;gap:.4rem;flex-wrap:wrap;min-height:80px;padding:.5rem;background:var(--bg-s);border:2px dashed var(--border);border-radius:var(--r)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem">
+            <div style="font-family:'JetBrains Mono';font-size:.75rem;color:var(--text2)">Valeur totale : <strong id="craftTotalVal" style="color:var(--gold)">0.00€</strong></div>
+            <div style="display:flex;gap:.4rem">
+              <button class="btn" onclick="clearCraftBooster()">🗑️ Vider</button>
+              <button class="btn pri" id="craftSaveBtn" onclick="saveCraftBooster()" disabled>💾 Sauvegarder le booster</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIST OF CRAFTED BOOSTERS -->
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📦 Boosters confectionnés</div>
+        <div class="pnl-acts">
+          <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="craftListFilter" onchange="renderCraftList()">
+            <option value="all">Tous</option>
+            <option value="pending">En attente</option>
+            <option value="sold">Distribués</option>
+          </select>
+        </div>
+      </div>
+      <div id="craftListEmpty" class="empty" style="display:none"><div class="ei">📦</div><div class="et">Aucun booster confectionné</div></div>
+      <table class="tbl" id="craftTable">
+        <thead><tr><th>Réf</th><th>Produit</th><th>Cartes</th><th>Valeur</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="craftListBody"></tbody>
+      </table>
+    </div>
+  </div></div>
+
+  <!-- ===== TCG & SERIES ===== -->
+  <div class="pg" id="p-tcg"><div class="body">
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🎴 Franchises TCG</div><div class="pnl-acts"><button class="btn pri" onclick="openAddTCG()">+ Ajouter TCG</button></div></div>
+      <table class="tbl"><thead><tr><th>TCG</th><th>Produits</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="tcgBody"></tbody>
+      </table>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📚 Séries</div><div class="pnl-acts"><button class="btn pri" onclick="openAddSeries()">+ Ajouter Série</button></div></div>
+      <table class="tbl"><thead><tr><th>Pos.</th><th>Série</th><th>TCG</th><th>Produits</th><th>Actions</th></tr></thead>
+        <tbody id="seriesBody"></tbody>
+      </table>
+    </div>
+  </div></div>
+
+  <!-- ===== ORDERS ===== -->
+  <div class="pg" id="p-orders"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">En attente</div><div class="stat-val" id="ordPending">0</div><div class="stat-ico">⏳</div></div>
+      <div class="stat s2"><div class="stat-label">Expédiées</div><div class="stat-val" id="ordShipped">0</div><div class="stat-ico">📮</div></div>
+      <div class="stat s3"><div class="stat-label">Livrées</div><div class="stat-val" id="ordDelivered">0</div><div class="stat-ico">✅</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🚚 Commandes d'envoi</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="ordFilter" onchange="renderOrders()"><option value="all">Toutes</option><option value="pending">En attente</option><option value="shipped">Expédiées</option><option value="delivered">Livrées</option></select>
+      </div></div>
+      <table class="tbl"><thead><tr><th>Réf</th><th>Client</th><th>Cartes</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="ordBody"></tbody>
+      </table>
+      <div class="empty" id="ordEmpty" style="display:none"><div class="ei">📭</div><div class="et">Aucune commande</div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== MARKETPLACE ===== -->
+  <div class="pg" id="p-mkt"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Annonces actives</div><div class="stat-val" id="mktListings">0</div><div class="stat-ico">💱</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">💱 Annonces en cours</div></div>
+      <table class="tbl"><thead><tr><th>Carte</th><th>Vendeur</th><th>Prix</th><th>Rareté</th><th>Actions</th></tr></thead>
+        <tbody id="mktBody"></tbody>
+      </table>
+      <div class="empty" id="mktEmpty" style="display:none"><div class="ei">💱</div><div class="et">Aucune annonce sur le marché</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">⚙️ Paramètres Marché</div></div>
+      <div class="form-row">
+        <div class="form-grp"><div class="form-lbl">Commission (%)</div><input class="form-inp" type="number" id="mktCommission" value="8" min="0" max="100"></div>
+        <div class="form-grp"><div class="form-lbl">Mise en avant (€/jour)</div><input class="form-inp" type="number" id="mktFeaturedPrice" value="2.50" step="0.01"></div>
+      </div>
+      <div style="padding:0 1rem .8rem"><button class="btn pri" onclick="saveMktSettings()">💾 Sauvegarder</button></div>
+    </div>
+  </div></div>
+
+  <!-- ===== USERS ===== -->
+  <div class="pg" id="p-users"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Total inscrits</div><div class="stat-val" id="usrTotal">0</div><div class="stat-ico">👥</div></div>
+      <div class="stat s2"><div class="stat-label">Actifs</div><div class="stat-val" id="usrActive">0</div><div class="stat-ico">🟢</div></div>
+      <div class="stat s3"><div class="stat-label">Bannis</div><div class="stat-val" id="usrBanned">0</div><div class="stat-ico">🚫</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">👥 Gestion des utilisateurs</div><div class="pnl-acts">
+        <input class="form-inp" placeholder="Rechercher..." id="usrSearch" oninput="renderUsers()" style="width:180px;padding:.3rem .6rem;font-size:.78rem">
+      </div></div>
+      <table class="tbl"><thead><tr><th>Utilisateur</th><th>Email</th><th>Inscrit</th><th>Solde</th><th>Cartes</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="usrBody"></tbody>
+      </table>
+      <div class="empty" id="usrEmpty" style="display:none"><div class="ei">👥</div><div class="et">Aucun utilisateur trouvé</div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== SUPPORT ===== -->
+  <div class="pg" id="p-support"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Tickets ouverts</div><div class="stat-val" id="supOpen">0</div><div class="stat-ico">📩</div></div>
+      <div class="stat s2"><div class="stat-label">En traitement</div><div class="stat-val" id="supProgress">0</div><div class="stat-ico">⏳</div></div>
+      <div class="stat s3"><div class="stat-label">Résolus</div><div class="stat-val" id="supResolved">0</div><div class="stat-ico">✅</div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">🎧 Tickets de support</div><div class="pnl-acts">
+        <select class="form-inp" style="padding:.3rem .5rem;font-size:.75rem" id="supFilter" onchange="renderTickets()"><option value="all">Tous</option><option value="open">Ouverts</option><option value="progress">En traitement</option><option value="resolved">Résolus</option></select>
+      </div></div>
+      <table class="tbl"><thead><tr><th>ID</th><th>Utilisateur</th><th>Sujet</th><th>Catégorie</th><th>Priorité</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="supBody"></tbody>
+      </table>
+      <div class="empty" id="supEmpty" style="display:none"><div class="ei">📭</div><div class="et">Aucun ticket</div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== FINANCE ===== -->
+  <div class="pg" id="p-finance"><div class="body">
+    <div class="stats">
+      <div class="stat s1"><div class="stat-label">Revenus boosters</div><div class="stat-val" id="finRevenue">0€</div><div class="stat-ico">💰</div></div>
+      <div class="stat s2"><div class="stat-label">Revenus envoi</div><div class="stat-val" id="finShipping">0€</div><div class="stat-ico">📦</div></div>
+      <div class="stat s3"><div class="stat-label">Recyclages payés</div><div class="stat-val" id="finRecycle">0€</div><div class="stat-ico">♻️</div></div>
+    </div>
+    <div class="pnl"><div class="pnl-hd"><div class="pnl-tt">📋 Toutes les transactions</div></div>
+      <table class="tbl"><thead><tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Description</th><th>Montant</th></tr></thead>
+        <tbody id="finBody"></tbody>
+      </table>
+      <div class="empty" id="finEmpty" style="display:none"><div class="ei">📊</div><div class="et">Aucune transaction enregistrée</div></div>
+    </div>
+  </div></div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div class="pg" id="p-settings"><div class="body">
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">⚙️ Paramètres généraux</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Nom du site</div><input class="form-inp" id="setSiteName" value="Vaulta Club"></div><div class="form-grp"><div class="form-lbl">Email de contact</div><input class="form-inp" id="setEmail" value="contact@vaultaclub.com"></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">📦 Envoi</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Frais d'envoi (€)</div><input class="form-inp" type="number" id="setShipCost" value="4.99" step="0.01"></div><div class="form-grp"><div class="form-lbl">Envoi gratuit dès (€, 0=désactivé)</div><input class="form-inp" type="number" id="setFreeShip" value="0" step="1"></div></div>
+    </div>
+    <div class="pnl">
+      <div class="pnl-hd"><div class="pnl-tt">♻️ Recyclage</div></div>
+      <div class="form-row"><div class="form-grp"><div class="form-lbl">Taux de recyclage (%)</div><input class="form-inp" type="number" id="setRecycleRate" value="40" min="0" max="100"></div><div class="form-grp"><div class="form-lbl">Bonus de bienvenue (€)</div><input class="form-inp" type="number" id="setWelcomeBonus" value="45" step="1"></div></div>
+    </div>
+    <div style="padding:0 0 1rem"><button class="btn pri" onclick="saveSettings()" style="font-size:.9rem;padding:.6rem 1.5rem">💾 Sauvegarder tous les paramètres</button></div>
+  </div></div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add/Edit Product -->
+<div class="modal-bg" id="prodModal">
+  <div class="modal"><button class="modal-close" onclick="closeMod('prodModal')">×</button>
+    <h2 id="prodModalTitle">📦 Ajouter un produit</h2>
+    <input type="hidden" id="prodEditId">
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">TCG</div><select class="form-inp" id="prodTCG"></select></div>
+      <div class="form-grp"><div class="form-lbl">Série</div><select class="form-inp" id="prodSeries"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">Nom du set</div><input class="form-inp" id="prodName" placeholder="Ex: Flammes Obsidiennes"></div>
+      <div class="form-grp"><div class="form-lbl">Prix booster (€)</div><input class="form-inp" type="number" id="prodPrice" step="0.01" value="5.50"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">Cartes par booster</div><input class="form-inp" type="number" id="prodCards" value="10"></div>
+      <div class="form-grp"><div class="form-lbl">Stock</div><input class="form-inp" type="number" id="prodStock" value="50"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">URL Logo série</div><input class="form-inp" id="prodLogo" placeholder="https://assets.tcgdex.net/fr/sv/sv03/logo.png"></div>
+      <div class="form-grp"><div class="form-lbl">Badge</div><select class="form-inp" id="prodBadge"><option value="">Aucun</option><option value="hot">🔥 Populaire</option><option value="new">✨ Nouveau</option><option value="ltd">⏰ Limité</option></select></div>
+    </div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Gradient CSS (couleurs)</div><input class="form-inp" id="prodGrad" placeholder="linear-gradient(135deg,#dc2626,#ea580c,#f59e0b)"></div></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">URL image booster</div><input class="form-inp" id="prodImg" placeholder="https://..."></div></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">ID set TCGdex (optionnel — pour auto-charger les cartes)</div><input class="form-inp" id="prodTcgdexId" placeholder="Ex: sv03, sv02, sv03.5, sv04..."></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('prodModal')">Annuler</button><button class="btn pri" onclick="saveProd()">💾 Sauvegarder</button></div>
+  </div>
+</div>
+
+<!-- Add TCG -->
+<div class="modal-bg" id="tcgModal">
+  <div class="modal"><button class="modal-close" onclick="closeMod('tcgModal')">×</button>
+    <h2>🎴 Ajouter un TCG</h2>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Nom de la franchise</div><input class="form-inp" id="tcgName" placeholder="Ex: One Piece Card Game"></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('tcgModal')">Annuler</button><button class="btn pri" onclick="saveTCG()">Ajouter</button></div>
+  </div>
+</div>
+
+<!-- Add Series -->
+<div class="modal-bg" id="seriesModal">
+  <div class="modal"><button class="modal-close" onclick="closeMod('seriesModal')">×</button>
+    <h2>📚 Ajouter une série</h2>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">TCG</div><select class="form-inp" id="seriesTCG"></select></div>
+      <div class="form-grp"><div class="form-lbl">Nom de la série</div><input class="form-inp" id="seriesName" placeholder="Ex: Noir & Blanc"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('seriesModal')">Annuler</button><button class="btn pri" onclick="saveSeries()">Ajouter</button></div>
+  </div>
+</div>
+
+<!-- Edit User -->
+<div class="modal-bg" id="userModal">
+  <div class="modal"><button class="modal-close" onclick="closeMod('userModal')">×</button>
+    <h2>✏️ Modifier l'utilisateur</h2>
+    <input type="hidden" id="userEditId">
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Pseudo</div><input class="form-inp" id="userPseudo" readonly></div><div class="form-grp"><div class="form-lbl">Email</div><input class="form-inp" id="userEmail" readonly></div></div>
+    <div class="form-row"><div class="form-grp"><div class="form-lbl">Solde (€)</div><input class="form-inp" type="number" id="userBalance" step="0.01"></div><div class="form-grp"><div class="form-lbl">Status</div><select class="form-inp" id="userStatus"><option value="active">Actif</option><option value="banned">Banni</option></select></div></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('userModal')">Annuler</button><button class="btn pri" onclick="saveUser()">Sauvegarder</button></div>
+  </div>
+</div>
+
+<!-- Ticket Modal -->
+<div class="modal-bg" id="ticketModal">
+  <div class="modal"><button class="modal-close" onclick="closeMod('ticketModal')">×</button>
+    <h2 id="ticketTitle">📝 Ticket</h2>
+    <input type="hidden" id="ticketEditId">
+    <div id="ticketMessages" style="max-height:200px;overflow-y:auto;margin-bottom:.7rem"></div>
+    <div class="form-row full"><div class="form-grp"><div class="form-lbl">Réponse</div><textarea class="form-inp" id="ticketReply" placeholder="Tapez votre réponse..."></textarea></div></div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">Status</div><select class="form-inp" id="ticketStatus"><option value="open">Ouvert</option><option value="progress">En traitement</option><option value="resolved">Résolu</option></select></div>
+      <div class="form-grp"><div class="form-lbl">Priorité</div><select class="form-inp" id="ticketPriority"><option value="low">Bas</option><option value="medium">Moyen</option><option value="urgent">Urgent</option></select></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('ticketModal')">Annuler</button><button class="btn pri" onclick="saveTicket()">📨 Envoyer</button></div>
+  </div>
+</div>
+
+<!-- Craft Booster Detail -->
+<div class="modal-bg" id="craftDetailModal">
+  <div class="modal" style="max-width:640px"><button class="modal-close" onclick="closeMod('craftDetailModal')">×</button>
+    <h2 id="craftDetailTitle">📦 Détail du booster</h2>
+    <div id="craftDetailContent" style="max-height:400px;overflow-y:auto"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('craftDetailModal')">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Card Edit Modal -->
+<div class="modal-bg" id="cardEditModal">
+  <div class="modal" style="max-width:500px"><button class="modal-close" onclick="closeMod('cardEditModal')">×</button>
+    <h2>✏️ Modifier la carte</h2>
+    <div style="display:flex;gap:.7rem;margin-bottom:.7rem;align-items:flex-start">
+      <img id="ceImg" style="width:100px;border-radius:8px;flex-shrink:0" onerror="this.style.display='none'">
+      <div>
+        <div id="ceName" style="font-weight:700;font-size:.95rem"></div>
+        <div id="ceSet" style="font-size:.75rem;color:var(--text2)"></div>
+        <div id="ceNum" style="font-size:.7rem;color:var(--text2);font-family:monospace"></div>
+        <div id="ceRarity" style="margin-top:.2rem"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">Prix actuel (€)</div><input class="form-inp" type="number" id="cePrice" step="0.01"></div>
+      <div class="form-grp"><div class="form-lbl">Rareté</div><select class="form-inp" id="ceRarSelect">
+        <option value="common">Commune</option><option value="uncommon">Peu commune</option><option value="rare">Rare</option><option value="ultra">Ultra Rare</option><option value="secret">Secrète</option>
+      </select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-grp"><div class="form-lbl">Nom affiché</div><input class="form-inp" id="ceNameEdit"></div>
+    </div>
+    <div style="font-size:.65rem;color:var(--text2);padding:.3rem 0">
+      <div id="ceCmInfo"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeMod('cardEditModal')">Annuler</button><button class="btn pri" onclick="saveCardEdit()">💾 Sauvegarder</button></div>
+  </div>
+</div>
+
+<!-- Notification Dropdown -->
+<div id="notifPanel" style="display:none;position:fixed;top:48px;right:12px;width:360px;max-height:480px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:9999;padding:0">
+  <div style="padding:.6rem .8rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-weight:700;font-size:.85rem">🔔 Notifications</span>
+    <button class="btn sm" onclick="clearNotifs()" style="font-size:.6rem">Tout marquer lu</button>
+  </div>
+  <div id="notifList" style="padding:.3rem"></div>
+  <div id="notifEmpty" style="padding:1.5rem;text-align:center;color:var(--text2);font-size:.75rem">Aucune notification</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="tI"></span><span id="tT"></span></div>
+
+<script>
+/* ==================================================================
+   VAULTA ADMIN — SERVER-BACKED DATA SYSTEM
+   All data stored in MongoDB via /api/settings API.
+   LS wrapper replaced by DB (API-backed with in-memory cache).
+   Token & avatar remain in localStorage (standard practice).
+   ================================================================== */
+
+// ==================== DATA LAYER (API-backed) ====================
+const _cache = {}; // In-memory cache
+const _dirty = new Set(); // Keys that need to be saved
+let _saveTimer = null;
+
+const LS = {
+  get(k, def = null) {
+    if (_cache.hasOwnProperty(k)) return _cache[k];
+    // Fallback to localStorage for migration period
+    try { const r = localStorage.getItem(k); if (r) { _cache[k] = JSON.parse(r); return _cache[k]; } } catch(e) {}
+    return def;
+  },
+  set(k, v) {
+    _cache[k] = v;
+    _dirty.add(k);
+    // Debounced save to API (batch saves every 500ms)
+    if (!_saveTimer) {
+      _saveTimer = setTimeout(() => {
+        _saveTimer = null;
+        _flushToAPI();
+      }, 500);
+    }
+  },
+  del(k) {
+    delete _cache[k];
+    // Delete from API
+    fetch(`/api/settings/${k}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: null }) }).catch(() => {});
+    try { localStorage.removeItem(k); } catch(e) {}
+  }
+};
+
+// Flush dirty keys to API
+async function _flushToAPI() {
+  if (_dirty.size === 0) return;
+  const settings = {};
+  _dirty.forEach(k => {
+    // Skip products (handled by /api/products) and token/avatar (stay in localStorage)
+    if (k === 'vc_products' || k === 'vc_token' || k === 'vc_avatar') return;
+    settings[k] = _cache[k];
+  });
+  _dirty.clear();
+  if (Object.keys(settings).length === 0) return;
+  try {
+    await fetch('/api/settings/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings })
+    });
+  } catch (e) {
+    console.warn('⚠️ API save failed, retrying...', e.message);
+    // Re-mark as dirty for next flush
+    Object.keys(settings).forEach(k => _dirty.add(k));
+  }
+}
+
+// Load ALL settings from API on startup
+async function _loadAllSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    Object.entries(data).forEach(([k, v]) => {
+      _cache[k] = v;
+      // Also clear from localStorage (migration cleanup)
+      try { localStorage.removeItem(k); } catch(e) {}
+    });
+    console.log(`✅ ${Object.keys(data).length} settings chargés depuis le serveur`);
+    return data;
+  } catch (e) {
+    console.warn('⚠️ API indisponible, fallback localStorage');
+    // Load from localStorage as fallback
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('vc_')) {
+        try { _cache[k] = JSON.parse(localStorage.getItem(k)); } catch(e) {}
+      }
+    }
+    return _cache;
+  }
+}
+
+// Default products — loaded from main site on first run
+const DEFAULT_PRODUCTS=[
+  {id:1,fr:'pokemon',name:'Flammes Obsidiennes',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:5.50,cards:10,badge:'hot',badgeText:'POPULAIRE',stock:24,grad:'linear-gradient(135deg,#dc2626,#ea580c,#f59e0b)',emoji:'🔥',boosterImg:'https://images.pokemontcg.io/sv3/logo.png',pool:[{name:'Charizard ex',r:'secret',e:'🔥',v:45,img:'https://images.pokemontcg.io/sv3/183.png'},{name:'Dragonite ex',r:'ultra',e:'🐉',v:15,img:'https://images.pokemontcg.io/sv3/159.png'},{name:'Tyranitar ex',r:'ultra',e:'🦖',v:12,img:'https://images.pokemontcg.io/sv3/170.png'},{name:'Eevee',r:'common',e:'🦊',v:0.5,img:'https://images.pokemontcg.io/sv3/130.png'},{name:'Pidgey',r:'common',e:'🐦',v:0.2,img:'https://images.pokemontcg.io/sv3/131.png'},{name:'Vespiquen ex',r:'rare',e:'🐝',v:6,img:'https://images.pokemontcg.io/sv3/6.png'},{name:'Greedent ex',r:'rare',e:'🐿️',v:5,img:'https://images.pokemontcg.io/sv3/134.png'},{name:'Revavroom ex',r:'rare',e:'🏎️',v:4,img:'https://images.pokemontcg.io/sv3/84.png'},{name:'Absol',r:'uncommon',e:'🌙',v:1.5,img:'https://images.pokemontcg.io/sv3/81.png'},{name:'Houndoom',r:'uncommon',e:'🐕',v:1,img:'https://images.pokemontcg.io/sv3/64.png'},{name:'Palafin',r:'common',e:'🐬',v:0.3,img:'https://images.pokemontcg.io/sv3/51.png'},{name:'Melmetal ex',r:'rare',e:'⚙️',v:7,img:'https://images.pokemontcg.io/sv3/93.png'}]},
+  {id:2,fr:'pokemon',name:'Évolutions à Paldea',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:5.50,cards:10,badge:null,stock:15,grad:'linear-gradient(135deg,#059669,#0891b2,#2563eb)',emoji:'🌿',boosterImg:'https://images.pokemontcg.io/sv2/logo.png',pool:[{name:'Chien-Pao ex',r:'secret',e:'❄️',v:40,img:'https://images.pokemontcg.io/sv2/176.png'},{name:'Ting-Lu ex',r:'ultra',e:'🦌',v:10,img:'https://images.pokemontcg.io/sv2/127.png'},{name:'Dedenne ex',r:'rare',e:'⚡',v:6,img:'https://images.pokemontcg.io/sv2/93.png'},{name:'Forretress ex',r:'rare',e:'💣',v:5,img:'https://images.pokemontcg.io/sv2/5.png'},{name:'Squawkabilly ex',r:'ultra',e:'🦜',v:16,img:'https://images.pokemontcg.io/sv2/169.png'},{name:'Slowpoke',r:'common',e:'🐚',v:0.3,img:'https://images.pokemontcg.io/sv2/46.png'},{name:'Nacli',r:'common',e:'🧂',v:0.3,img:'https://images.pokemontcg.io/sv2/103.png'},{name:'Dondozo',r:'uncommon',e:'🐟',v:1,img:'https://images.pokemontcg.io/sv2/57.png'},{name:'Varoom',r:'common',e:'🔩',v:0.2,img:'https://images.pokemontcg.io/sv2/117.png'}]},
+  {id:3,fr:'pokemon',name:'151',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:6.90,cards:10,badge:'new',badgeText:'NOUVEAU',stock:12,grad:'linear-gradient(135deg,#7c3aed,#db2777,#ec4899)',emoji:'🎴',boosterImg:'https://images.pokemontcg.io/sv3pt5/logo.png',pool:[{name:'Mew ex',r:'secret',e:'🧬',v:55,img:'https://images.pokemontcg.io/sv3pt5/205.png'},{name:'Alakazam ex',r:'ultra',e:'🥄',v:14,img:'https://images.pokemontcg.io/sv3pt5/65.png'},{name:'Venusaur ex',r:'rare',e:'🌺',v:8,img:'https://images.pokemontcg.io/sv3pt5/182.png'},{name:'Pikachu',r:'common',e:'⚡',v:1,img:'https://images.pokemontcg.io/sv3pt5/25.png'},{name:'Bulbasaur',r:'common',e:'🌱',v:0.5,img:'https://images.pokemontcg.io/sv3pt5/1.png'},{name:'Charmander',r:'common',e:'🦎',v:0.5,img:'https://images.pokemontcg.io/sv3pt5/4.png'},{name:'Squirtle',r:'common',e:'💧',v:0.4,img:'https://images.pokemontcg.io/sv3pt5/7.png'},{name:'Eevee',r:'uncommon',e:'🦊',v:1.5,img:'https://images.pokemontcg.io/sv3pt5/133.png'},{name:'Gengar ex',r:'rare',e:'👻',v:6,img:'https://images.pokemontcg.io/sv3pt5/94.png'},{name:'Zapdos ex',r:'ultra',e:'⚡',v:12,img:'https://images.pokemontcg.io/sv3pt5/145.png'}]},
+  {id:4,fr:'pokemon',name:'Faille Paradoxe',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:5.50,cards:10,badge:null,stock:20,grad:'linear-gradient(135deg,#6d28d9,#4f46e5,#2563eb)',emoji:'⏳',boosterImg:'https://images.pokemontcg.io/sv4/logo.png',pool:[{name:'Iron Valiant ex',r:'secret',e:'⚔️',v:38,img:'https://images.pokemontcg.io/sv4/205.png'},{name:'Roaring Moon ex',r:'ultra',e:'🌙',v:16,img:'https://images.pokemontcg.io/sv4/109.png'},{name:'Iron Hands ex',r:'ultra',e:'🤖',v:14,img:'https://images.pokemontcg.io/sv4/166.png'},{name:'Gholdengo ex',r:'rare',e:'💰',v:7,img:'https://images.pokemontcg.io/sv4/91.png'},{name:'Tinkatuff',r:'uncommon',e:'🔨',v:1,img:'https://images.pokemontcg.io/sv4/96.png'},{name:'Flamigo',r:'common',e:'🦩',v:0.3,img:'https://images.pokemontcg.io/sv4/128.png'},{name:'Ditto',r:'uncommon',e:'🟣',v:1.5,img:'https://images.pokemontcg.io/sv4/132.png'},{name:'Glimmet',r:'common',e:'💎',v:0.2,img:'https://images.pokemontcg.io/sv4/88.png'}]},
+  {id:5,fr:'pokemon',name:'Forces Temporelles',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:5.50,cards:10,badge:'ltd',badgeText:'LIMITÉ',stock:6,grad:'linear-gradient(135deg,#ea580c,#f59e0b,#eab308)',emoji:'⏰',boosterImg:'https://images.pokemontcg.io/sv5/logo.png',pool:[{name:'Walking Wake ex',r:'secret',e:'🌊',v:42,img:'https://images.pokemontcg.io/sv5/24.png'},{name:'Iron Leaves ex',r:'ultra',e:'🍃',v:15,img:'https://images.pokemontcg.io/sv5/23.png'},{name:'Flygon ex',r:'rare',e:'🐉',v:6,img:'https://images.pokemontcg.io/sv5/91.png'},{name:'Raikou',r:'rare',e:'⚡',v:5,img:'https://images.pokemontcg.io/sv5/33.png'},{name:'Ralts',r:'common',e:'💚',v:0.3,img:'https://images.pokemontcg.io/sv5/60.png'},{name:'Teddiursa',r:'common',e:'🧸',v:0.2,img:'https://images.pokemontcg.io/sv5/127.png'},{name:'Magikarp',r:'common',e:'🐟',v:0.1,img:'https://images.pokemontcg.io/sv5/29.png'}]},
+  {id:6,fr:'pokemon',name:'Masque Crépusculaire',sub:'Écarlate & Violet',series:'Écarlate & Violet',price:5.50,cards:10,badge:'new',badgeText:'NOUVEAU',stock:30,grad:'linear-gradient(135deg,#14532d,#166534,#15803d)',emoji:'🎭',boosterImg:'https://images.pokemontcg.io/sv6/logo.png',pool:[{name:'Terapagos ex',r:'secret',e:'✨',v:48,img:'https://images.pokemontcg.io/sv6/171.png'},{name:'Sinistcha ex',r:'rare',e:'🍵',v:6,img:'https://images.pokemontcg.io/sv6/28.png'},{name:'Dipplin',r:'uncommon',e:'🍎',v:2,img:'https://images.pokemontcg.io/sv6/14.png'},{name:'Poltchageist',r:'common',e:'🫖',v:0.5,img:'https://images.pokemontcg.io/sv6/26.png'},{name:'Applin',r:'common',e:'🍏',v:0.3,img:'https://images.pokemontcg.io/sv6/12.png'},{name:'Phantump',r:'common',e:'🌳',v:0.2,img:'https://images.pokemontcg.io/sv6/24.png'},{name:'Lombre',r:'uncommon',e:'🌿',v:1,img:'https://images.pokemontcg.io/sv6/5.png'}]}
+];
+
+// Load or initialize all shared data
+async function initData(){
+  // Load all settings from API first
+  await _loadAllSettings();
+  
+  // Initialize defaults for any missing keys
+  if(!LS.get('vc_tcg')){LS.set('vc_tcg',[{id:'pokemon',name:'Pokémon',active:true},{id:'onepiece',name:'One Piece',active:false},{id:'yugioh',name:'Yu-Gi-Oh!',active:false},{id:'dragonball',name:'Dragon Ball',active:false},{id:'magic',name:'Magic: The Gathering',active:false}])}
+  if(!LS.get('vc_series')){LS.set('vc_series',[{id:'sv',name:'Écarlate & Violet',tcg:'pokemon'}])}
+  if(!LS.get('vc_orders')){LS.set('vc_orders',[])}
+  if(!LS.get('vc_tickets')){LS.set('vc_tickets',[])}
+  if(!LS.get('vc_mkt_settings')){LS.set('vc_mkt_settings',{commission:8,featuredPrice:2.50})}
+  if(!LS.get('vc_settings')){LS.set('vc_settings',{siteName:'Vaulta Club',email:'contact@vaultaclub.com',shipCost:4.99,freeShip:0,recycleRate:40,welcomeBonus:45})}
+  if(!LS.get('vc_activity')){LS.set('vc_activity',[])}
+  if(!LS.get('vc_users')){LS.set('vc_users',[])}
+  
+  // Re-render current page with fresh data
+  renderDash();
+  await loadAdminProducts();
+}
+// Start loading in background (don't block UI)
+initData();
+
+// Helper to get all registered users from vc_users + their per-user data
+function getAllUsers(){
+  const reg=LS.get('vc_users',[]);
+  return reg.map(u=>{
+    const data=LS.get('vc_data_'+u.id,{});
+    return {...u,bal:data.bal||0,coll:data.coll||[],txHistory:data.txHistory||[],status:u.status||'active'};
+  });
+}
+
+// Add activity log
+function logActivity(action,user,detail){
+  const log=LS.get('vc_activity',[]);
+  log.unshift({action,user:user||'Admin',detail,time:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),date:new Date().toLocaleDateString('fr-FR')});
+  if(log.length>100)log.length=100;
+  LS.set('vc_activity',log);
+}
+
+// ==================== NAVIGATION ====================
+function goA(pg){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+pg).classList.add('on');
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.toggle('on',b.dataset.p===pg));
+  const titles={dash:'Dashboard',stock:'Stocks & Produits',cards:'Cartes',craft:'Confection Boosters',tcg:'TCG & Séries',orders:'Commandes',mkt:'Marché',users:'Utilisateurs',support:'Support',finance:'Finance',settings:'Paramètres'};
+  document.getElementById('tbTitle').textContent=titles[pg]||'Dashboard';
+  document.getElementById('sidebar').classList.remove('open');
+  // Render the page
+  if(pg==='dash')renderDash();
+  if(pg==='stock')renderStock();
+  if(pg==='cards')renderCards();
+  if(pg==='craft')renderCraft();
+  if(pg==='tcg')renderTCG();
+  if(pg==='orders')renderOrders();
+  if(pg==='mkt')renderMkt();
+  if(pg==='users')renderUsers();
+  if(pg==='support')renderTickets();
+  if(pg==='finance')renderFinance();
+  if(pg==='settings')loadSettings();
+}
+
+function openMod(id){document.getElementById(id).classList.add('on')}
+function closeMod(id){document.getElementById(id).classList.remove('on')}
+function toast(msg,type='ok'){const t=document.getElementById('toast');document.getElementById('tI').textContent=type==='ok'?'✅':'❌';document.getElementById('tT').textContent=msg;t.className='toast '+type+' on';setTimeout(()=>t.classList.remove('on'),3500)}
+
+// ==================== 1. DASHBOARD ====================
+function renderDash(){
+  const prods=LS.get('vc_products',[]);
+  const users=getAllUsers();
+  const tickets=LS.get('vc_tickets',[]);
+  const orders=LS.get('vc_orders',[]);
+  const activity=LS.get('vc_activity',[]);
+
+  document.getElementById('dashUsers').textContent=users.length;
+  document.getElementById('dashStock').textContent=prods.reduce((s,p)=>s+p.stock,0);
+  document.getElementById('dashProds').textContent=prods.length;
+  document.getElementById('dashTickets').textContent=tickets.filter(t=>t.status!=='resolved').length;
+
+  // Stock summary
+  document.getElementById('dashStockSummary').innerHTML=prods.length?
+    `<table class="tbl"><thead><tr><th>Produit</th><th>Stock</th><th>Prix</th></tr></thead><tbody>`+
+    prods.map(p=>{
+      const sc=p.stock>10?'chip-ok':p.stock>3?'chip-warn':'chip-err';
+      return `<tr><td>${p.emoji||'🎴'} ${p.name}</td><td><span class="chip ${sc}">${p.stock}</span></td><td class="mono" style="color:var(--gold)">${p.price.toFixed(2)}€</td></tr>`;
+    }).join('')+'</tbody></table>'
+    :'<div class="empty"><div class="ei">📦</div><div class="et">Aucun produit</div></div>';
+
+  // Alerts
+  const alerts=[];
+  prods.forEach(p=>{if(p.stock<=3)alerts.push(`<div class="alert alert-warn">⚠️ Stock critique : ${p.name} (${p.stock} restants)</div>`)});
+  prods.forEach(p=>{if(p.stock>3&&p.stock<=10)alerts.push(`<div class="alert alert-info">ℹ️ Stock bas : ${p.name} (${p.stock})</div>`)});
+  if(tickets.filter(t=>t.status==='open').length)alerts.push(`<div class="alert alert-warn">📩 ${tickets.filter(t=>t.status==='open').length} ticket(s) ouvert(s)</div>`);
+  if(orders.filter(o=>o.status==='pending').length)alerts.push(`<div class="alert alert-info">📦 ${orders.filter(o=>o.status==='pending').length} commande(s) en attente</div>`);
+  if(!alerts.length)alerts.push('<div class="alert alert-ok">✅ Tout est en ordre !</div>');
+  document.getElementById('dashAlerts').innerHTML=alerts.join('');
+
+  // Activity
+  document.getElementById('dashActivity').innerHTML=activity.length?
+    `<table class="tbl"><thead><tr><th>Heure</th><th>Action</th><th>Utilisateur</th><th>Détail</th></tr></thead><tbody>`+
+    activity.slice(0,15).map(a=>`<tr><td class="mono">${a.time}</td><td>${a.action}</td><td>${a.user}</td><td>${a.detail||''}</td></tr>`).join('')+
+    '</tbody></table>'
+    :'<div class="empty"><div class="ei">🕐</div><div class="et">Aucune activité enregistrée</div></div>';
+
+  // Sidebar badges
+  document.getElementById('badgeOrders').textContent=orders.filter(o=>o.status==='pending').length;
+  document.getElementById('badgeTickets').textContent=tickets.filter(t=>t.status!=='resolved').length;
+}
+
+// ==================== 2. STOCKS & PRODUITS ====================
+function renderStock(){
+  const prods=adminProducts.length?adminProducts:[];
+  const tcgs=LS.get('vc_tcg',[]);
+  const filtTCG=document.getElementById('stockTCGFilter').value;
+  const filtSeries=document.getElementById('stockSeriesFilter').value;
+  let filtered=filtTCG==='all'?prods:prods.filter(p=>p.fr===filtTCG);
+  if(filtSeries!=='all')filtered=filtered.filter(p=>(p.series||p.sub)===filtSeries);
+
+  // Update TCG filter
+  const sel=document.getElementById('stockTCGFilter');
+  const curVal=sel.value;
+  sel.innerHTML='<option value="all">Tous les TCG</option>'+tcgs.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  sel.value=curVal||'all';
+
+  // Update series filter
+  const selS=document.getElementById('stockSeriesFilter');
+  const curValS=selS.value;
+  const seriesNames=[...new Set(prods.map(p=>p.series||p.sub).filter(Boolean))];
+  selS.innerHTML='<option value="all">Toutes les séries</option>'+seriesNames.map(s=>`<option value="${s}">${s}</option>`).join('');
+  selS.value=curValS||'all';
+
+  // Stats
+  document.getElementById('totalStock').textContent=filtered.reduce((s,p)=>s+p.stock,0);
+  document.getElementById('stockValue').textContent=filtered.reduce((s,p)=>s+p.stock*p.price,0).toFixed(2)+'€';
+  document.getElementById('stockProds').textContent=filtered.length;
+  document.getElementById('stockAlerts').textContent=filtered.filter(p=>p.stock<=5).length;
+
+  // Table with position arrows
+  document.getElementById('stockBody').innerHTML=filtered.map((p,i)=>{
+    const sc=p.stock>10?'chip-ok':p.stock>3?'chip-warn':'chip-err';
+    const sl=p.stock>10?'En stock':p.stock>3?'Stock bas':p.stock>0?'Critique':'Épuisé';
+    const logo=p.logoUrl?`<img src="${p.logoUrl}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px" onerror="this.style.display='none'">`:(p.emoji?p.emoji+' ':'');
+    return `<tr>
+      <td style="text-align:center">
+        <button class="btn" style="padding:1px 5px;font-size:.6rem" onclick="moveProd('${p.id}',-1)" ${i===0?'disabled':''}>▲</button>
+        <button class="btn" style="padding:1px 5px;font-size:.6rem" onclick="moveProd('${p.id}',1)" ${i===filtered.length-1?'disabled':''}>▼</button>
+      </td>
+      <td><strong>${logo}${p.name}</strong><br><span style="font-size:.6rem;color:${p.poolReady?'var(--vc-green)':'var(--vc-text-dim)'}">🃏 ${p.poolCount||0} cartes${p.poolReady?' ✅':' ⏳'}</span></td>
+      <td>${p.fr}</td><td>${p.sub||p.series||''}</td>
+      <td class="mono" style="color:var(--gold)">${p.price.toFixed(2)}€</td>
+      <td class="mono">${p.stock}</td>
+      <td><span class="chip ${sc}">${sl}</span></td>
+      <td><div class="pnl-acts">
+        <button class="btn red" onclick="adjStock('${p.id}',-1)">−1</button>
+        <button class="btn" onclick="adjStock('${p.id}',-5)">−5</button>
+        <button class="btn" onclick="adjStock('${p.id}',+1)">+1</button>
+        <button class="btn grn" onclick="adjStock('${p.id}',+10)">+10</button>
+        <button class="btn amb" onclick="editProd('${p.id}')">✏️</button>
+        <button class="btn" onclick="refreshPool('${p.id}')" title="Rafraîchir le pool TCGdex" style="background:var(--vc-primary)">🔄</button>
+        <button class="btn" onclick="syncProductPrices('${p.tcgdexId}','${p.name}')" title="Sync prix Cardmarket" style="background:var(--vc-gold);color:#000">💰</button>
+        <button class="btn red" onclick="delProd('${p.id}')">🗑️</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+// Refresh TCGdex pool for a single product
+async function refreshPool(id){
+  const p=adminProducts.find(x=>(x._id||x.id)===id);
+  if(!p){toast('Produit introuvable','err');return}
+  if(!p.tcgdexId){toast('Pas de TCGdex ID configuré','err');return}
+  toast(`🔄 Rafraîchissement du pool "${p.name}"...`,'ok');
+  try{
+    const res=await fetch(`/api/products/${id}/refresh-pool`,{method:'POST'});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur');
+    toast(`✅ ${data.poolCount} cartes chargées pour "${p.name}"`,'ok');
+    await loadAdminProducts();
+    renderStock();
+  }catch(e){
+    toast(`❌ Échec: ${e.message}`,'err');
+  }
+}
+
+// Sync prices from Cardmarket API
+async function syncAllPrices(){
+  if(!confirm('Synchroniser les prix Cardmarket pour tous les boosters ?\nCela utilise votre quota API quotidien.'))return;
+  document.getElementById('priceSyncStatus').textContent='⏳ Sync en cours...';
+  toast('💰 Sync des prix Cardmarket démarré...','ok');
+  try{
+    const res=await fetch('/api/prices/sync-all',{method:'POST'});
+    const data=await res.json();
+    toast(`✅ ${data.message}`,'ok');
+    document.getElementById('priceSyncStatus').textContent='✅ Sync lancé (voir console serveur)';
+    // Poll status after a delay
+    setTimeout(loadPriceSyncStatus, 10000);
+  }catch(e){
+    toast(`❌ Erreur sync: ${e.message}`,'err');
+    document.getElementById('priceSyncStatus').textContent='❌ Erreur';
+  }
+}
+
+// Sync prices for a single product
+async function syncProductPrices(tcgdexId, name){
+  toast(`💰 Sync prix: ${name}...`,'ok');
+  try{
+    const res=await fetch(`/api/prices/sync/${tcgdexId}`,{method:'POST'});
+    const data=await res.json();
+    if(res.ok){toast(`✅ ${data.synced} prix synchronisés pour ${data.setName}`,'ok')}
+    else{toast(`❌ ${data.error}`,'err')}
+  }catch(e){toast(`❌ ${e.message}`,'err')}
+}
+
+// Load and display price sync status
+async function loadPriceSyncStatus(){
+  try{
+    const res=await fetch('/api/prices/status');
+    if(!res.ok)return;
+    const data=await res.json();
+    const el=document.getElementById('priceSyncStatus');
+    if(el){
+      const total=data.totalPrices||0;
+      const sets=data.setsWithPrices||0;
+      const ago=data.lastUpdate?Math.round((Date.now()-new Date(data.lastUpdate))/1000/60):null;
+      el.textContent=`📊 ${total} prix en cache | ${sets} sets${ago!==null&&!isNaN(ago)?` | MAJ il y a ${ago}min`:''}`;
+    }
+  }catch(e){
+    const el=document.getElementById('priceSyncStatus');
+    if(el)el.textContent='⚠️ Status indisponible';
+  }
+}
+
+// Load price status on page load
+setTimeout(loadPriceSyncStatus, 2000);
+
+// Refresh ALL pools
+async function refreshAllPools(){
+  const prods=adminProducts.filter(p=>p.tcgdexId);
+  if(!prods.length){toast('Aucun produit avec TCGdex ID','err');return}
+  if(!confirm(`Rafraîchir les pools de ${prods.length} produit(s) ? Cela peut prendre quelques minutes.`))return;
+  toast(`🔄 Rafraîchissement de ${prods.length} pools...`,'ok');
+  let ok=0,fail=0;
+  for(const p of prods){
+    try{
+      const res=await fetch(`/api/products/${p._id||p.id}/refresh-pool`,{method:'POST'});
+      if(res.ok){ok++;toast(`✅ ${p.name} OK (${ok}/${prods.length})`,'ok')}
+      else{fail++;toast(`❌ ${p.name} échoué`,'err')}
+    }catch(e){fail++}
+  }
+  toast(`🏁 Terminé: ${ok} réussis, ${fail} échoués`,'ok');
+  await loadAdminProducts();
+  renderStock();
+}
+
+async function moveProd(id,dir){
+  const idx=adminProducts.findIndex(p=>(p._id||p.id)===id);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=adminProducts.length)return;
+  [adminProducts[idx],adminProducts[newIdx]]=[adminProducts[newIdx],adminProducts[idx]];
+  // Update order field on server
+  try{
+    await fetch(`/api/products/${adminProducts[idx]._id||adminProducts[idx].id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:idx})});
+    await fetch(`/api/products/${adminProducts[newIdx]._id||adminProducts[newIdx].id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:newIdx})});
+  }catch(e){console.warn('Move sync failed:',e)}
+  renderStock();
+}
+
+async function adjStock(id,d){
+  const p=adminProducts.find(x=>(x._id||x.id)===id);
+  if(!p)return;
+  const newStock=Math.max(0,(p.stock||0)+d);
+  try{
+    const res=await fetch(`/api/products/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock:newStock})});
+    if(!res.ok)throw new Error('Erreur serveur');
+    p.stock=newStock;
+    logActivity('Stock modifié','Admin',`${p.name}: ${d>0?'+':''}${d} → ${newStock}`);
+    renderStock();
+    toast(`Stock ${d>0?'+':''}${d} pour ${p.name}`,'ok');
+  }catch(e){toast(`❌ ${e.message}`,'err')}
+}
+
+function openAddProd(){
+  document.getElementById('prodEditId').value='';
+  document.getElementById('prodModalTitle').textContent='📦 Ajouter un produit';
+  document.getElementById('prodName').value='';
+  document.getElementById('prodPrice').value='5.50';
+  document.getElementById('prodCards').value='10';
+  document.getElementById('prodStock').value='50';
+  document.getElementById('prodLogo').value='';
+  document.getElementById('prodBadge').value='';
+  document.getElementById('prodGrad').value='';
+  document.getElementById('prodImg').value='';
+  document.getElementById('prodTcgdexId').value='';
+  populateProdSelects();
+  openMod('prodModal');
+}
+
+function editProd(id){
+  const p=adminProducts.find(x=>(x._id||x.id)===id);
+  if(!p)return;
+  document.getElementById('prodEditId').value=id;
+  document.getElementById('prodModalTitle').textContent='✏️ Modifier: '+p.name;
+  document.getElementById('prodName').value=p.name;
+  document.getElementById('prodPrice').value=p.price;
+  document.getElementById('prodCards').value=p.cards;
+  document.getElementById('prodStock').value=p.stock;
+  document.getElementById('prodLogo').value=p.logoUrl||'';
+  document.getElementById('prodBadge').value=p.badge||'';
+  document.getElementById('prodGrad').value=p.grad||'';
+  document.getElementById('prodImg').value=p.boosterImg||'';
+  document.getElementById('prodTcgdexId').value=p.tcgdexId||'';
+  populateProdSelects(p.fr,p.series||p.sub);
+  openMod('prodModal');
+}
+
+function populateProdSelects(selTCG,selSeries){
+  const tcgs=LS.get('vc_tcg',[]);
+  const series=LS.get('vc_series',[]);
+  const tcgSel=document.getElementById('prodTCG');
+  const serSel=document.getElementById('prodSeries');
+  tcgSel.innerHTML=tcgs.map(t=>`<option value="${t.id}" ${t.id===selTCG?'selected':''}>${t.name}</option>`).join('');
+  serSel.innerHTML=series.map(s=>`<option value="${s.name}" ${s.name===selSeries?'selected':''}>${s.name} (${s.tcg})</option>`).join('');
+}
+
+// TCGdex fetching is now handled server-side via /api/products
+
+async function saveProd(){
+  const editId=document.getElementById('prodEditId').value;
+  const name=document.getElementById('prodName').value.trim();
+  if(!name){toast('Nom requis','err');return}
+
+  const badgeMap={hot:'POPULAIRE',new:'NOUVEAU',ltd:'LIMITÉ'};
+  const badgeVal=document.getElementById('prodBadge').value;
+  const data={
+    fr:document.getElementById('prodTCG').value,
+    name,
+    sub:document.getElementById('prodSeries').value,
+    series:document.getElementById('prodSeries').value,
+    price:parseFloat(document.getElementById('prodPrice').value)||5.50,
+    cards:parseInt(document.getElementById('prodCards').value)||10,
+    stock:parseInt(document.getElementById('prodStock').value)||0,
+    logoUrl:document.getElementById('prodLogo').value.trim()||'',
+    emoji:document.getElementById('prodLogo').value.trim()?'':'🎴',
+    badge:badgeVal||null,
+    badgeText:badgeMap[badgeVal]||null,
+    grad:document.getElementById('prodGrad').value||'linear-gradient(135deg,#6366f1,#7c3aed,#a78bfa)',
+    boosterImg:document.getElementById('prodImg').value||'',
+    tcgdexId:document.getElementById('prodTcgdexId').value.trim()||''
+  };
+
+  closeMod('prodModal');
+  if(data.tcgdexId)toast(`⏳ Chargement des cartes TCGdex pour ${name}...`,'ok');
+  else toast(editId?'Modification en cours...':'Ajout en cours...','ok');
+
+  try{
+    let res;
+    if(editId){
+      res=await fetch(`/api/products/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    }else{
+      res=await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    }
+    if(!res.ok){const err=await res.json();throw new Error(err.error||'Erreur serveur')}
+    const product=await res.json();
+    logActivity(editId?'Produit modifié':'Produit ajouté','Admin',name);
+    
+    await loadAdminProducts(); // Refresh from API
+    renderStock();
+    const poolCount=product.pool?product.pool.length:0;
+    toast(`✅ ${name} — ${poolCount>0?poolCount+' cartes chargées':'sauvegardé'} !`,'ok');
+  }catch(e){
+    console.error('saveProd error:',e);
+    toast(`❌ ${e.message}`,'err');
+  }
+}
+
+// Load products from API for admin
+var adminProducts=[];
+async function loadAdminProducts(){
+  try{
+    const res=await fetch('/api/products');
+    if(!res.ok)throw new Error('API error');
+    adminProducts=await res.json();
+    // Map _id to id for compatibility
+    adminProducts.forEach(p=>{ if(p._id && !p.id) p.id=p._id; });
+    return adminProducts;
+  }catch(e){
+    console.warn('API unavailable:',e.message);
+    adminProducts=[];
+    return adminProducts;
+  }
+}
+
+async function delProd(id){
+  if(!confirm('Supprimer ce produit ?'))return;
+  try{
+    const res=await fetch(`/api/products/${id}`,{method:'DELETE'});
+    if(!res.ok)throw new Error('Erreur suppression');
+    logActivity('Produit supprimé','Admin','#'+id);
+    await loadAdminProducts();
+    renderStock();
+    toast('Produit supprimé','ok');
+  }catch(e){
+    toast(`❌ ${e.message}`,'err');
+  }
+}
+
+// ==================== 2B. CONFECTION DE BOOSTERS ====================
+let craftBoosterCards=[];
+let craftSearchTimeout=null;
+
+function renderCraft(){
+  const prods=LS.get('vc_products',[]);
+  const boosters=LS.get('vc_crafted_boosters',[]);
+  const pending=boosters.filter(b=>b.status==='pending');
+  const sold=boosters.filter(b=>b.status==='sold');
+
+  document.getElementById('craftTotal').textContent=boosters.length;
+  document.getElementById('craftPending').textContent=pending.length;
+  document.getElementById('craftSold').textContent=sold.length;
+  document.getElementById('craftProds').textContent=prods.filter(p=>p.stock>0).length;
+
+  // Populate product select
+  document.getElementById('craftProd').innerHTML=prods.map(p=>
+    `<option value="${p.id}">${p.emoji||'🎴'} ${p.name} (${p.cards} cartes/booster)</option>`
+  ).join('');
+
+  onCraftProdChange();
+  renderCraftList();
+}
+
+function onCraftProdChange(){
+  const prods=LS.get('vc_products',[]);
+  const pid=parseInt(document.getElementById('craftProd').value);
+  const p=prods.find(x=>x.id===pid);
+  if(p){
+    document.getElementById('craftMax').textContent=p.cards||10;
+  }
+  // Clear current search
+  document.getElementById('craftSearchResults').innerHTML='';
+  document.getElementById('craftSearch').value='';
+  updateCraftUI();
+}
+
+function craftSearchCards(){
+  const q=(document.getElementById('craftSearch').value||'').toLowerCase().trim();
+  const rarF=document.getElementById('craftRarFilter').value;
+  const container=document.getElementById('craftSearchResults');
+  if(q.length<1){container.innerHTML='<div style="font-size:.75rem;color:var(--dim);padding:.5rem">Tapez au moins 1 caractère...</div>';return}
+
+  // Search in the pool of the selected product
+  const prods=LS.get('vc_products',[]);
+  const pid=parseInt(document.getElementById('craftProd').value);
+  const p=prods.find(x=>x.id===pid);
+  if(!p||!p.pool||!p.pool.length){
+    container.innerHTML='<div style="font-size:.75rem;color:var(--fire);padding:.5rem">⚠️ Ce produit n\'a pas de catalogue de cartes. Chargez-le d\'abord via TCGdex sur le site.</div>';
+    return;
+  }
+
+  let results=p.pool.filter(c=>c.name&&c.name.toLowerCase().includes(q));
+  if(rarF!=='all')results=results.filter(c=>c.r===rarF);
+  results=results.slice(0,40); // Limit results
+
+  const rarColors={common:'var(--dim)',uncommon:'var(--green)',rare:'var(--pri-l)',ultra:'var(--gold)',secret:'var(--acc)'};
+  const rarLabels={common:'C',uncommon:'UC',rare:'R',ultra:'UR',secret:'SR'};
+
+  // Store results globally so we can reference by index on click
+  window._craftResults=results;
+
+  container.innerHTML=results.length?results.map((c,i)=>{
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:7px;cursor:pointer;overflow:hidden;transition:.2s;position:relative" onclick="addCardToCraft(window._craftResults[${i}])" title="${(c.name||'').replace(/"/g,'&quot;')}">
+      <div style="aspect-ratio:5/7;overflow:hidden;background:var(--bg-s)">
+        ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=text-align:center;padding-top:30%;font-size:1.5rem>${c.e||'🃏'}</div>'">`:`<div style="text-align:center;padding-top:30%;font-size:1.5rem">${c.e||'🃏'}</div>`}
+      </div>
+      <div style="padding:.2rem .3rem">
+        <div style="font-size:.55rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.5rem;color:${rarColors[c.r]||'var(--dim)'};font-weight:700">${rarLabels[c.r]||'?'}</span>
+          <span style="font-family:'JetBrains Mono';font-size:.5rem;color:var(--gold)">${(c.v||0).toFixed(2)}€</span>
+        </div>
+      </div>
+      <div style="position:absolute;top:3px;right:3px;background:var(--green);color:#fff;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;opacity:.85">+</div>
+    </div>`}).join('')
+    :'<div style="font-size:.75rem;color:var(--dim);padding:.5rem">Aucune carte trouvée pour "'+q+'"</div>';
+}
+
+function addCardToCraft(card){
+  const prods=LS.get('vc_products',[]);
+  const pid=parseInt(document.getElementById('craftProd').value);
+  const p=prods.find(x=>x.id===pid);
+  const max=p?p.cards:10;
+
+  if(craftBoosterCards.length>=max){
+    toast(`Le booster est plein (${max} cartes max)`,'err');
+    return;
+  }
+  // Add card with unique craft id and default variant
+  craftBoosterCards.push({...card,_cid:Date.now()+Math.random(),variant:'normal'});
+  updateCraftUI();
+  toast(`+ ${card.name}`,'ok');
+}
+
+function removeCraftCard(cid){
+  craftBoosterCards=craftBoosterCards.filter(c=>c._cid!==cid);
+  updateCraftUI();
+}
+
+function updateCraftUI(){
+  const prods=LS.get('vc_products',[]);
+  const pid=parseInt(document.getElementById('craftProd').value);
+  const p=prods.find(x=>x.id===pid);
+  const max=p?p.cards:10;
+
+  document.getElementById('craftCount').textContent=craftBoosterCards.length;
+  document.getElementById('craftMax').textContent=max;
+
+  const totalVal=craftBoosterCards.reduce((s,c)=>s+(c.v||0),0);
+  document.getElementById('craftTotalVal').textContent=totalVal.toFixed(2)+'€';
+
+  const rarColors={common:'var(--dim)',uncommon:'var(--green)',rare:'var(--pri-l)',ultra:'var(--gold)',secret:'var(--acc)'};
+  const rarLabels={common:'C',uncommon:'UC',rare:'R',ultra:'UR',secret:'SR'};
+  const varColors={normal:'transparent',holo:'linear-gradient(135deg,#fbbf24,#f59e0b)',reverse:'linear-gradient(135deg,#818cf8,#6366f1)',pokeball:'linear-gradient(135deg,#ef4444,#fff 50%,#333 50%)',masterball:'linear-gradient(135deg,#7c3aed,#db2777)'};
+  const varLabels={normal:'',holo:'✨',reverse:'🔄',pokeball:'⚪',masterball:'💜'};
+  const varBorders={normal:'var(--border)',holo:'#fbbf24',reverse:'#818cf8',pokeball:'#ef4444',masterball:'#7c3aed'};
+
+  document.getElementById('craftCards').innerHTML=craftBoosterCards.length?
+    craftBoosterCards.map((c,idx)=>`
+      <div style="width:78px;position:relative;flex-shrink:0" title="${c.name} — ${(c.v||0).toFixed(2)}€ — ${c.variant||'normal'}">
+        <div style="aspect-ratio:5/7;border-radius:6px;overflow:hidden;border:2px solid ${varBorders[c.variant]||'var(--border)'};background:var(--bg-card);position:relative">
+          ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<div style=text-align:center;padding-top:30%;font-size:1.2rem>${c.e||'🃏'}</div>'">`:`<div style="text-align:center;padding-top:30%;font-size:1.2rem">${c.e||'🃏'}</div>`}
+          ${c.variant&&c.variant!=='normal'?`<div style="position:absolute;top:2px;left:2px;font-size:.5rem;font-weight:700;padding:1px 4px;border-radius:3px;background:${varColors[c.variant]};color:${c.variant==='pokeball'?'#333':'#fff'};text-shadow:${c.variant==='pokeball'?'none':'0 1px 2px rgba(0,0,0,.5)'}">${varLabels[c.variant]} ${c.variant.charAt(0).toUpperCase()+c.variant.slice(1)}</div>`:''}
+        </div>
+        <select onchange="setCraftVariant(${c._cid},this.value)" style="width:100%;font-size:.5rem;padding:1px 2px;margin-top:.15rem;background:var(--bg-s);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer">
+          <option value="normal"${c.variant==='normal'?' selected':''}>Normal</option>
+          <option value="holo"${c.variant==='holo'?' selected':''}>✨ Holo</option>
+          <option value="reverse"${c.variant==='reverse'?' selected':''}>🔄 Reverse</option>
+          <option value="pokeball"${c.variant==='pokeball'?' selected':''}>⚪ Pokéball</option>
+          <option value="masterball"${c.variant==='masterball'?' selected':''}>💜 Masterball</option>
+        </select>
+        <div style="font-size:.48rem;font-weight:600;text-align:center;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+        <div style="text-align:center">
+          <span style="font-size:.42rem;color:${rarColors[c.r]};font-weight:700">${rarLabels[c.r]||'?'}</span>
+          ${(c.variant==='pokeball'||c.variant==='masterball')?`<span onclick="editCraftPrice(${c._cid})" style="font-family:'JetBrains Mono';font-size:.42rem;color:var(--gold);cursor:pointer;text-decoration:underline dotted" title="Cliquez pour modifier le prix">${(c.v||0).toFixed(2)}€ ✏️</span>`:`<span style="font-family:'JetBrains Mono';font-size:.42rem;color:var(--gold)">${(c.v||0).toFixed(2)}€</span>`}
+        </div>
+        <button onclick="removeCraftCard(${c._cid})" style="position:absolute;top:-4px;right:-4px;background:var(--fire);color:#fff;border:2px solid var(--bg);width:18px;height:18px;border-radius:50%;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1">✕</button>
+      </div>
+    `).join('')
+    :'<div style="width:100%;text-align:center;padding:1.5rem;color:var(--dim);font-size:.8rem">Cherchez et cliquez sur les cartes ci-dessus pour les ajouter ici</div>';
+
+  // Enable/disable save button
+  const btn=document.getElementById('craftSaveBtn');
+  btn.disabled=craftBoosterCards.length!==max;
+  btn.textContent=craftBoosterCards.length===max?'💾 Sauvegarder le booster':`💾 ${craftBoosterCards.length}/${max} cartes`;
+}
+
+function setCraftVariant(cid, variant){
+  const card=craftBoosterCards.find(c=>c._cid===cid);
+  if(!card)return;
+  card.variant=variant;
+  // Adjust price based on variant
+  if(variant==='holo'||variant==='reverse'){
+    if(card.priceHolo&&card.priceHolo>0){
+      card.v=card.priceHolo;
+    }
+  }else if(variant==='pokeball'||variant==='masterball'){
+    // Pokeball/Masterball are separate rarities with unique prices
+    // TCGdex doesn't have these prices, so prompt for manual input
+    const currentPrice=(card.v||0).toFixed(2);
+    const label=variant==='pokeball'?'Pokéball':'Masterball';
+    const newPrice=prompt(`💰 Prix ${label} pour ${card.name} ?\n(Cardmarket n'a pas ce prix automatiquement)`,currentPrice);
+    if(newPrice!==null&&!isNaN(parseFloat(newPrice))){
+      card.v=parseFloat(newPrice);
+    }
+  }else{
+    if(card.priceNormal&&card.priceNormal>0){
+      card.v=card.priceNormal;
+    }
+  }
+  updateCraftUI();
+}
+
+function editCraftPrice(cid){
+  const card=craftBoosterCards.find(c=>c._cid===cid);
+  if(!card)return;
+  const label=card.variant==='pokeball'?'Pokéball':card.variant==='masterball'?'Masterball':card.variant||'';
+  const newPrice=prompt(`💰 Prix ${label} pour ${card.name} :`,card.v.toFixed(2));
+  if(newPrice!==null&&!isNaN(parseFloat(newPrice))){
+    card.v=parseFloat(newPrice);
+    updateCraftUI();
+  }
+}
+
+function clearCraftBooster(){
+  craftBoosterCards=[];
+  updateCraftUI();
+}
+
+function saveCraftBooster(){
+  const prods=LS.get('vc_products',[]);
+  const pid=parseInt(document.getElementById('craftProd').value);
+  const p=prods.find(x=>x.id===pid);
+  if(!p)return;
+  const max=p.cards||10;
+  if(craftBoosterCards.length!==max){toast(`Il faut exactement ${max} cartes`,'err');return}
+
+  const ref=document.getElementById('craftRef').value.trim()||('CB-'+Date.now().toString(36).toUpperCase());
+  const booster={
+    id:'craft_'+Date.now(),
+    ref,
+    productId:pid,
+    productName:p.name,
+    cards:craftBoosterCards.map(c=>({name:c.name,r:c.r,e:c.e,v:c.v,img:c.img,imgLow:c.imgLow||'',localId:c.localId||'',variant:c.variant||'normal',priceNormal:c.priceNormal||0,priceHolo:c.priceHolo||0,cardNum:c.cardNum||'',setOfficial:c.setOfficial||'',rarityName:c.rarityName||'',category:c.category||''})),
+    totalVal:craftBoosterCards.reduce((s,c)=>s+(c.v||0),0),
+    status:'pending',
+    date:new Date().toLocaleDateString('fr-FR'),
+    createdAt:Date.now()
+  };
+
+  const boosters=LS.get('vc_crafted_boosters',[]);
+  boosters.push(booster);
+  LS.set('vc_crafted_boosters',boosters);
+
+  logActivity('Booster confectionné','Admin',`${p.name} — ${ref} (${max} cartes, ${booster.totalVal.toFixed(2)}€)`);
+  toast(`Booster ${ref} sauvegardé ! ✅`,'ok');
+  craftBoosterCards=[];
+  document.getElementById('craftRef').value='';
+  updateCraftUI();
+  renderCraftList();
+}
+
+function renderCraftList(){
+  const boosters=LS.get('vc_crafted_boosters',[]);
+  const filt=document.getElementById('craftListFilter').value;
+  const filtered=filt==='all'?boosters:boosters.filter(b=>b.status===filt);
+
+  document.getElementById('craftListEmpty').style.display=filtered.length?'none':'block';
+  document.getElementById('craftTable').style.display=filtered.length?'':'none';
+
+  const statusChips={pending:'chip-warn',sold:'chip-ok'};
+  const statusLabels={pending:'En attente',sold:'Distribué'};
+
+  document.getElementById('craftListBody').innerHTML=filtered.map(b=>{
+    const preview=b.cards.slice(0,3).map(c=>c.name).join(', ')+(b.cards.length>3?' ...':'');
+    return `<tr>
+      <td class="mono" style="font-size:.72rem">${b.ref}</td>
+      <td>${b.productName||'?'}</td>
+      <td style="font-size:.75rem" title="${b.cards.map(c=>c.name).join('\n')}">${b.cards.length} cartes — ${preview}</td>
+      <td class="mono" style="color:var(--gold)">${(b.totalVal||0).toFixed(2)}€</td>
+      <td><span class="chip ${statusChips[b.status]||'chip-warn'}">${statusLabels[b.status]||b.status}</span></td>
+      <td class="mono" style="font-size:.72rem">${b.date}</td>
+      <td><div class="pnl-acts">
+        <button class="btn" onclick="viewCraftBooster('${b.id}')">👁️</button>
+        ${b.status==='pending'?`<button class="btn red" onclick="delCraftBooster('${b.id}')">🗑️</button>`:''}
+      </div></td>
+    </tr>`}).join('');
+}
+
+function viewCraftBooster(id){
+  const boosters=LS.get('vc_crafted_boosters',[]);
+  const b=boosters.find(x=>x.id===id);
+  if(!b)return;
+
+  const rarColors={common:'var(--dim)',uncommon:'var(--green)',rare:'var(--pri-l)',ultra:'var(--gold)',secret:'var(--acc)'};
+  const rarLabels={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+
+  const varBorders={normal:'var(--border)',holo:'#fbbf24',reverse:'#818cf8',pokeball:'#ef4444',masterball:'#7c3aed'};
+  const varLabels2={normal:'',holo:'✨ Holo',reverse:'🔄 Reverse',pokeball:'⚪ Pokéball',masterball:'💜 Masterball'};
+
+  document.getElementById('craftDetailTitle').textContent=`📦 Booster ${b.ref}`;
+  document.getElementById('craftDetailContent').innerHTML=`
+    <div style="display:flex;justify-content:space-between;margin-bottom:.6rem;font-size:.8rem;color:var(--text2)">
+      <span>Produit : <strong style="color:var(--text)">${b.productName}</strong></span>
+      <span>Date : <strong>${b.date}</strong></span>
+      <span>Valeur : <strong style="color:var(--gold)">${(b.totalVal||0).toFixed(2)}€</strong></span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem">
+      ${b.cards.map(c=>`
+        <div style="text-align:center">
+          <div style="aspect-ratio:5/7;border-radius:6px;overflow:hidden;border:2px solid ${varBorders[c.variant]||'var(--border)'};background:var(--bg-s);margin-bottom:.2rem;position:relative">
+            ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<div style=padding-top:35%;font-size:1.5rem>${c.e||'🃏'}</div>'">`:`<div style="padding-top:35%;font-size:1.5rem">${c.e||'🃏'}</div>`}
+            ${c.variant&&c.variant!=='normal'?`<div style="position:absolute;bottom:2px;left:2px;right:2px;font-size:.45rem;font-weight:700;text-align:center;padding:1px;border-radius:3px;background:rgba(0,0,0,.7);color:#fff">${varLabels2[c.variant]||c.variant}</div>`:''}
+          </div>
+          <div style="font-size:.6rem;font-weight:600">${c.name}</div>
+          <div style="font-size:.55rem;color:${rarColors[c.r]}">${rarLabels[c.r]||'?'} — ${(c.v||0).toFixed(2)}€</div>
+        </div>
+      `).join('')}
+    </div>`;
+  openMod('craftDetailModal');
+}
+
+function delCraftBooster(id){
+  if(!confirm('Supprimer ce booster confectionné ?'))return;
+  const boosters=LS.get('vc_crafted_boosters',[]).filter(b=>b.id!==id);
+  LS.set('vc_crafted_boosters',boosters);
+  renderCraftList();
+  toast('Booster supprimé','ok');
+}
+
+// ==================== 3. TCG & SÉRIES ====================
+function renderTCG(){
+  const tcgs=LS.get('vc_tcg',[]);
+  const series=LS.get('vc_series',[]);
+  const prods=LS.get('vc_products',[]);
+
+  document.getElementById('tcgBody').innerHTML=tcgs.map(t=>{
+    const cnt=prods.filter(p=>p.fr===t.id).length;
+    const chip=t.active?'chip-ok':'chip-warn';
+    const label=t.active?'Actif':'Inactif';
+    return `<tr>
+      <td><strong>${t.name}</strong></td>
+      <td class="mono">${cnt} produit(s)</td>
+      <td><span class="chip ${chip}">${label}</span></td>
+      <td><div class="pnl-acts">
+        <button class="btn amb" onclick="renameTCG('${t.id}')">✏️ Renommer</button>
+        <button class="btn ${t.active?'red':'grn'}" onclick="toggleTCG('${t.id}')">${t.active?'Désactiver':'Activer'}</button>
+        <button class="btn red" onclick="delTCG('${t.id}')">🗑️</button>
+      </div></td></tr>`;
+  }).join('');
+
+  document.getElementById('seriesBody').innerHTML=series.map((s,i)=>{
+    const cnt=prods.filter(p=>(p.series===s.name||p.sub===s.name)).length;
+    return `<tr>
+      <td><div style="display:flex;gap:3px;align-items:center">
+        <button class="btn" style="padding:1px 5px;font-size:.6rem" onclick="moveSeries('${s.id}',-1)" ${i===0?'disabled':''}>▲</button>
+        <button class="btn" style="padding:1px 5px;font-size:.6rem" onclick="moveSeries('${s.id}',1)" ${i===series.length-1?'disabled':''}>▼</button>
+      </div></td>
+      <td><strong>${s.name}</strong></td>
+      <td>${s.tcg}</td>
+      <td class="mono">${cnt}</td>
+      <td><div class="pnl-acts">
+        <button class="btn amb" onclick="renameSeries('${s.id}')">✏️ Renommer</button>
+        <button class="btn red" onclick="delSeries('${s.id}')">🗑️</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+function openAddTCG(){document.getElementById('tcgName').value='';openMod('tcgModal')}
+function saveTCG(){
+  const name=document.getElementById('tcgName').value.trim();
+  if(!name){toast('Nom requis','err');return}
+  const tcgs=LS.get('vc_tcg',[]);
+  const id=name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(tcgs.find(t=>t.id===id)){toast('Ce TCG existe déjà','err');return}
+  tcgs.push({id,name,active:true});
+  LS.set('vc_tcg',tcgs);
+  logActivity('TCG ajouté','Admin',name);
+  closeMod('tcgModal');renderTCG();toast('TCG ajouté !','ok');
+}
+function toggleTCG(id){
+  const tcgs=LS.get('vc_tcg',[]);
+  const t=tcgs.find(x=>x.id===id);
+  if(t){t.active=!t.active;LS.set('vc_tcg',tcgs);renderTCG();toast(`${t.name} ${t.active?'activé':'désactivé'}`,'ok')}
+}
+function delTCG(id){
+  if(!confirm('Supprimer ce TCG ?'))return;
+  LS.set('vc_tcg',LS.get('vc_tcg',[]).filter(t=>t.id!==id));
+  renderTCG();toast('TCG supprimé','ok');
+}
+
+function openAddSeries(){
+  document.getElementById('seriesName').value='';
+  const tcgs=LS.get('vc_tcg',[]);
+  document.getElementById('seriesTCG').innerHTML=tcgs.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  openMod('seriesModal');
+}
+function saveSeries(){
+  const name=document.getElementById('seriesName').value.trim();
+  const tcg=document.getElementById('seriesTCG').value;
+  if(!name){toast('Nom requis','err');return}
+  const series=LS.get('vc_series',[]);
+  const id=name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  series.push({id,name,tcg});
+  LS.set('vc_series',series);
+  logActivity('Série ajoutée','Admin',name+' ('+tcg+')');
+  closeMod('seriesModal');renderTCG();toast('Série ajoutée !','ok');
+}
+function delSeries(id){
+  if(!confirm('Supprimer cette série ?'))return;
+  LS.set('vc_series',LS.get('vc_series',[]).filter(s=>s.id!==id));
+  renderTCG();toast('Série supprimée','ok');
+}
+
+function renameTCG(id){
+  const tcgs=LS.get('vc_tcg',[]);
+  const t=tcgs.find(x=>x.id===id);
+  if(!t)return;
+  const newName=prompt('Nouveau nom pour "'+t.name+'" :',t.name);
+  if(!newName||!newName.trim())return;
+  const oldName=t.name;
+  t.name=newName.trim();
+  LS.set('vc_tcg',tcgs);
+  logActivity('TCG renommé','Admin',oldName+' → '+t.name);
+  renderTCG();toast('TCG renommé !','ok');
+}
+
+function renameSeries(id){
+  const series=LS.get('vc_series',[]);
+  const s=series.find(x=>x.id===id);
+  if(!s)return;
+  const newName=prompt('Nouveau nom pour "'+s.name+'" :',s.name);
+  if(!newName||!newName.trim())return;
+  const oldName=s.name;
+  // Update all products that reference this series
+  const prods=LS.get('vc_products',[]);
+  prods.forEach(p=>{
+    if(p.series===oldName)p.series=newName.trim();
+    if(p.sub===oldName)p.sub=newName.trim();
+  });
+  LS.set('vc_products',prods);
+  s.name=newName.trim();
+  LS.set('vc_series',series);
+  logActivity('Série renommée','Admin',oldName+' → '+s.name);
+  renderTCG();toast('Série renommée !','ok');
+}
+
+function moveSeries(id,dir){
+  const series=LS.get('vc_series',[]);
+  const idx=series.findIndex(s=>s.id===id);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=series.length)return;
+  [series[idx],series[newIdx]]=[series[newIdx],series[idx]];
+  LS.set('vc_series',series);
+  renderTCG();
+}
+
+// ==================== 4. COMMANDES ====================
+function renderOrders(){
+  const orders=LS.get('vc_orders',[]);
+  const filt=document.getElementById('ordFilter').value;
+  const filtered=filt==='all'?orders:orders.filter(o=>o.status===filt);
+
+  document.getElementById('ordPending').textContent=orders.filter(o=>o.status==='pending').length;
+  document.getElementById('ordShipped').textContent=orders.filter(o=>o.status==='shipped').length;
+  document.getElementById('ordDelivered').textContent=orders.filter(o=>o.status==='delivered').length;
+
+  document.getElementById('ordEmpty').style.display=filtered.length?'none':'block';
+  document.getElementById('ordBody').innerHTML=filtered.map(o=>{
+    const chips={pending:'chip-warn',shipped:'chip-ok',delivered:'chip-info'};
+    const labels={pending:'En attente',shipped:'Expédiée',delivered:'Livrée'};
+    return `<tr>
+      <td class="mono">${o.ref}</td>
+      <td>${o.user}</td>
+      <td class="mono">${o.cards} carte(s)</td>
+      <td class="mono">${o.date}</td>
+      <td><span class="chip ${chips[o.status]||'chip-warn'}">${labels[o.status]||o.status}</span></td>
+      <td><div class="pnl-acts">
+        ${o.status==='pending'?`<button class="btn grn" onclick="shipOrder('${o.id}')">📮 Expédier</button>`:''}
+        ${o.status==='shipped'?`<button class="btn pri" onclick="deliverOrder('${o.id}')">✅ Livré</button>`:''}
+      </div></td></tr>`;
+  }).join('');
+}
+
+function shipOrder(id){
+  const orders=LS.get('vc_orders',[]);
+  const o=orders.find(x=>x.id===id);
+  if(o){o.status='shipped';LS.set('vc_orders',orders);logActivity('Commande expédiée','Admin',o.ref);renderOrders();toast('Commande expédiée !','ok')}
+}
+function deliverOrder(id){
+  const orders=LS.get('vc_orders',[]);
+  const o=orders.find(x=>x.id===id);
+  if(o){o.status='delivered';LS.set('vc_orders',orders);logActivity('Commande livrée','Admin',o.ref);renderOrders();toast('Commande livrée !','ok')}
+}
+
+// ==================== 5. MARCHÉ ====================
+function renderMkt(){
+  // Read marketplace listings from vc_marketplace
+  const listings=LS.get('vc_marketplace',[]);
+  const settings=LS.get('vc_mkt_settings',{commission:8,featuredPrice:2.50});
+
+  document.getElementById('mktListings').textContent=listings.length;
+  document.getElementById('mktCommission').value=settings.commission;
+  document.getElementById('mktFeaturedPrice').value=settings.featuredPrice;
+
+  document.getElementById('mktEmpty').style.display=listings.length?'none':'block';
+  const rarLabels={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+  const rarChips={common:'chip-info',uncommon:'chip-info',rare:'chip-warn',ultra:'chip-sec',secret:'chip-err'};
+  document.getElementById('mktBody').innerHTML=listings.map((l,i)=>`<tr>
+    <td><strong>${l.name}</strong></td>
+    <td>${l.seller||'?'}</td>
+    <td class="mono" style="color:var(--green)">${(l.price||l.v||0).toFixed(2)}€</td>
+    <td><span class="chip ${rarChips[l.r]||'chip-info'}">${rarLabels[l.r]||l.r}</span></td>
+    <td><button class="btn red" onclick="delListing(${i})">🗑️ Retirer</button></td>
+  </tr>`).join('');
+}
+
+function delListing(i){
+  const listings=LS.get('vc_marketplace',[]);
+  const removed=listings.splice(i,1)[0];
+  LS.set('vc_marketplace',listings);
+  logActivity('Annonce retirée','Admin',removed?removed.name:'');
+  renderMkt();toast('Annonce retirée du marché','ok');
+}
+
+function saveMktSettings(){
+  const settings={
+    commission:parseFloat(document.getElementById('mktCommission').value)||8,
+    featuredPrice:parseFloat(document.getElementById('mktFeaturedPrice').value)||2.50
+  };
+  LS.set('vc_mkt_settings',settings);
+  toast('Paramètres marché sauvegardés','ok');
+}
+
+// ==================== 6. UTILISATEURS ====================
+function renderUsers(){
+  const users=getAllUsers();
+  const search=(document.getElementById('usrSearch').value||'').toLowerCase();
+  const filtered=search?users.filter(u=>(u.pseudo||'').toLowerCase().includes(search)||(u.email||'').toLowerCase().includes(search)):users;
+
+  document.getElementById('usrTotal').textContent=users.length;
+  document.getElementById('usrActive').textContent=users.filter(u=>u.status!=='banned').length;
+  document.getElementById('usrBanned').textContent=users.filter(u=>u.status==='banned').length;
+
+  document.getElementById('usrEmpty').style.display=filtered.length?'none':'block';
+  document.getElementById('usrBody').innerHTML=filtered.map(u=>{
+    const initials=(u.pseudo||'??').slice(0,2).toUpperCase();
+    const colors=['var(--pri)','var(--green)','var(--amber)','var(--fire)','var(--sec)','var(--cyan)'];
+    const color=colors[Math.abs(hashStr(u.id||''))%colors.length];
+    const statusChip=u.status==='banned'?'chip-err':'chip-ok';
+    const statusLabel=u.status==='banned'?'Banni':'Actif';
+    return `<tr>
+      <td><span class="avatar-sm" style="background:${color}">${initials}</span><strong>${u.pseudo||'?'}</strong></td>
+      <td class="mono" style="font-size:.72rem">${u.email||'—'}</td>
+      <td class="mono">${u.date||'—'}</td>
+      <td class="mono" style="color:var(--gold)">${(u.bal||0).toFixed(2)}€</td>
+      <td class="mono">${(u.coll||[]).length}</td>
+      <td><span class="chip ${statusChip}">${statusLabel}</span></td>
+      <td><div class="pnl-acts">
+        <button class="btn" onclick="openEditUser('${u.id}')">✏️</button>
+        <button class="btn ${u.status==='banned'?'grn':'red'}" onclick="toggleBan('${u.id}')">${u.status==='banned'?'✅ Débannir':'🚫 Bannir'}</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h)+s.charCodeAt(i);return h}
+
+function openEditUser(id){
+  const users=LS.get('vc_users',[]);
+  const u=users.find(x=>x.id===id);
+  if(!u)return;
+  const data=LS.get('vc_data_'+id,{});
+  document.getElementById('userEditId').value=id;
+  document.getElementById('userPseudo').value=u.pseudo||'';
+  document.getElementById('userEmail').value=u.email||'';
+  document.getElementById('userBalance').value=data.bal||0;
+  document.getElementById('userStatus').value=u.status||'active';
+  openMod('userModal');
+}
+
+function saveUser(){
+  const id=document.getElementById('userEditId').value;
+  const users=LS.get('vc_users',[]);
+  const u=users.find(x=>x.id===id);
+  if(!u)return;
+
+  // Update status
+  u.status=document.getElementById('userStatus').value;
+  LS.set('vc_users',users);
+
+  // Update balance
+  const newBal=parseFloat(document.getElementById('userBalance').value)||0;
+  const data=LS.get('vc_data_'+id,{});
+  data.bal=newBal;
+  LS.set('vc_data_'+id,data);
+
+  logActivity('Utilisateur modifié','Admin',u.pseudo+' → solde: '+newBal.toFixed(2)+'€');
+  closeMod('userModal');renderUsers();toast('Utilisateur modifié','ok');
+}
+
+function toggleBan(id){
+  const users=LS.get('vc_users',[]);
+  const u=users.find(x=>x.id===id);
+  if(!u)return;
+  u.status=u.status==='banned'?'active':'banned';
+  LS.set('vc_users',users);
+  logActivity(u.status==='banned'?'Utilisateur banni':'Utilisateur débanni','Admin',u.pseudo);
+  renderUsers();toast(u.status==='banned'?'Utilisateur banni':'Utilisateur débanni','ok');
+}
+
+// ==================== 7. SUPPORT ====================
+function renderTickets(){
+  const tickets=LS.get('vc_tickets',[]);
+  const filt=document.getElementById('supFilter').value;
+  const filtered=filt==='all'?tickets:tickets.filter(t=>t.status===filt);
+
+  document.getElementById('supOpen').textContent=tickets.filter(t=>t.status==='open').length;
+  document.getElementById('supProgress').textContent=tickets.filter(t=>t.status==='progress').length;
+  document.getElementById('supResolved').textContent=tickets.filter(t=>t.status==='resolved').length;
+
+  document.getElementById('supEmpty').style.display=filtered.length?'none':'block';
+  const prioChips={low:'chip-ok',medium:'chip-warn',urgent:'chip-err'};
+  const prioLabels={low:'Bas',medium:'Moyen',urgent:'Urgent'};
+  const statChips={open:'chip-warn',progress:'chip-info',resolved:'chip-ok'};
+  const statLabels={open:'Ouvert',progress:'En traitement',resolved:'Résolu'};
+
+  document.getElementById('supBody').innerHTML=filtered.map(t=>`<tr>
+    <td class="mono">#${t.id}</td>
+    <td>${t.user}</td>
+    <td>${t.subject}</td>
+    <td><span class="chip chip-info">${t.category||'Général'}</span></td>
+    <td><span class="chip ${prioChips[t.priority]||'chip-ok'}">${prioLabels[t.priority]||t.priority}</span></td>
+    <td class="mono">${t.date}</td>
+    <td><span class="chip ${statChips[t.status]||'chip-warn'}">${statLabels[t.status]||t.status}</span></td>
+    <td><button class="btn pri" onclick="openTicket('${t.id}')">📝 ${t.status==='resolved'?'Voir':'Répondre'}</button></td>
+  </tr>`).join('');
+}
+
+function openTicket(id){
+  const tickets=LS.get('vc_tickets',[]);
+  const t=tickets.find(x=>x.id===id);
+  if(!t)return;
+  document.getElementById('ticketEditId').value=id;
+  document.getElementById('ticketTitle').textContent='📝 Ticket #'+id;
+  document.getElementById('ticketStatus').value=t.status;
+  document.getElementById('ticketPriority').value=t.priority;
+  document.getElementById('ticketReply').value='';
+
+  // Render messages
+  const msgs=t.messages||[{from:t.user,text:t.message||t.subject,date:t.date}];
+  document.getElementById('ticketMessages').innerHTML=msgs.map(m=>`
+    <div style="background:var(--bg-s);border-radius:8px;padding:.7rem;margin-bottom:.5rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+        <strong style="font-size:.82rem;color:${m.from==='Admin'?'var(--amber)':'var(--text)'}">${m.from==='Admin'?'👤 Admin':'@'+m.from}</strong>
+        <span class="mono" style="font-size:.65rem;color:var(--dim)">${m.date||''}</span>
+      </div>
+      <p style="font-size:.82rem;color:var(--text2)">${m.text}</p>
+    </div>
+  `).join('');
+  openMod('ticketModal');
+}
+
+function saveTicket(){
+  const id=document.getElementById('ticketEditId').value;
+  const tickets=LS.get('vc_tickets',[]);
+  const t=tickets.find(x=>x.id===id);
+  if(!t)return;
+  t.status=document.getElementById('ticketStatus').value;
+  t.priority=document.getElementById('ticketPriority').value;
+
+  const reply=document.getElementById('ticketReply').value.trim();
+  if(reply){
+    if(!t.messages)t.messages=[{from:t.user,text:t.message||t.subject,date:t.date}];
+    t.messages.push({from:'Admin',text:reply,date:new Date().toLocaleDateString('fr-FR')});
+    logActivity('Réponse ticket','Admin','#'+id);
+  }
+  LS.set('vc_tickets',tickets);
+  closeMod('ticketModal');renderTickets();toast('Ticket mis à jour','ok');
+}
+
+// ==================== 8. FINANCE ====================
+function renderFinance(){
+  const users=getAllUsers();
+  let allTx=[];
+  let totalPur=0,totalShip=0,totalRec=0;
+
+  users.forEach(u=>{
+    (u.txHistory||[]).forEach(tx=>{
+      allTx.push({...tx,user:u.pseudo||'?'});
+      if(tx.type==='pur'&&tx.amt<0)totalPur+=Math.abs(tx.amt);
+      if(tx.type==='pur'&&tx.desc&&tx.desc.includes('Envoi'))totalShip+=Math.abs(tx.amt);
+      if(tx.type==='rec')totalRec+=Math.abs(tx.amt);
+    });
+  });
+
+  document.getElementById('finRevenue').textContent=totalPur.toFixed(2)+'€';
+  document.getElementById('finShipping').textContent=totalShip.toFixed(2)+'€';
+  document.getElementById('finRecycle').textContent=totalRec.toFixed(2)+'€';
+
+  document.getElementById('finEmpty').style.display=allTx.length?'none':'block';
+  const typeLabels={dep:'Dépôt',pur:'Achat',rec:'Recyclage',sell:'Vente marché'};
+  document.getElementById('finBody').innerHTML=allTx.slice(0,50).map(tx=>`<tr>
+    <td class="mono">${tx.date}</td>
+    <td>${tx.user}</td>
+    <td>${typeLabels[tx.type]||tx.type}</td>
+    <td>${tx.desc||''}</td>
+    <td class="mono" style="color:${tx.amt>=0?'var(--green)':'var(--fire)'}">${tx.amt>=0?'+':''}${tx.amt.toFixed(2)}€</td>
+  </tr>`).join('');
+}
+
+// ==================== 9. PARAMÈTRES ====================
+function loadSettings(){
+  const s=LS.get('vc_settings',{});
+  document.getElementById('setSiteName').value=s.siteName||'Vaulta Club';
+  document.getElementById('setEmail').value=s.email||'';
+  document.getElementById('setShipCost').value=s.shipCost||4.99;
+  document.getElementById('setFreeShip').value=s.freeShip||0;
+  document.getElementById('setRecycleRate').value=s.recycleRate||40;
+  document.getElementById('setWelcomeBonus').value=s.welcomeBonus||45;
+}
+
+function saveSettings(){
+  const s={
+    siteName:document.getElementById('setSiteName').value,
+    email:document.getElementById('setEmail').value,
+    shipCost:parseFloat(document.getElementById('setShipCost').value)||4.99,
+    freeShip:parseFloat(document.getElementById('setFreeShip').value)||0,
+    recycleRate:parseInt(document.getElementById('setRecycleRate').value)||40,
+    welcomeBonus:parseInt(document.getElementById('setWelcomeBonus').value)||45
+  };
+  LS.set('vc_settings',s);
+  logActivity('Paramètres modifiés','Admin','');
+  toast('Tous les paramètres sauvegardés !','ok');
+}
+
+// ==================== 10. NOTIFICATIONS ====================
+function getNotifs(){return LS.get('vc_admin_notifs',[])}
+function saveNotifs(n){LS.set('vc_admin_notifs',n)}
+
+function addNotif(title,body,type='info'){
+  const notifs=getNotifs();
+  notifs.unshift({id:Date.now(),title,body,type,time:new Date().toISOString(),read:false});
+  // Keep max 50
+  if(notifs.length>50)notifs.length=50;
+  saveNotifs(notifs);
+  updateNotifBadge();
+}
+
+function updateNotifBadge(){
+  const notifs=getNotifs();
+  const unread=notifs.filter(n=>!n.read).length;
+  const dot=document.getElementById('notifDot');
+  if(dot)dot.style.display=unread>0?'':'none';
+}
+
+function toggleNotifs(){
+  const panel=document.getElementById('notifPanel');
+  const isOpen=panel.style.display!=='none';
+  panel.style.display=isOpen?'none':'block';
+  if(!isOpen)renderNotifs();
+  // Close on outside click
+  if(!isOpen){
+    setTimeout(()=>{
+      const closer=function(e){
+        if(!panel.contains(e.target)&&!e.target.closest('.tb-notif')){
+          panel.style.display='none';
+          document.removeEventListener('click',closer);
+        }
+      };
+      document.addEventListener('click',closer);
+    },10);
+  }
+}
+
+function renderNotifs(){
+  const notifs=getNotifs();
+  const list=document.getElementById('notifList');
+  const empty=document.getElementById('notifEmpty');
+  if(!notifs.length){list.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  const typeIco={info:'ℹ️',order:'🚚',price:'📊',stock:'📦',user:'👤',alert:'⚠️'};
+  list.innerHTML=notifs.slice(0,30).map(n=>{
+    const ago=timeAgo(n.time);
+    return `<div style="padding:.5rem .6rem;border-bottom:1px solid var(--border);opacity:${n.read?.8:1};cursor:pointer${!n.read?';background:rgba(99,102,241,.05)':''}" onclick="markNotifRead(${n.id})">
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:${n.read?400:600}">
+        <span>${typeIco[n.type]||'📌'}</span>${n.title}
+        <span style="margin-left:auto;font-size:.6rem;color:var(--text2);font-weight:400">${ago}</span>
+      </div>
+      ${n.body?`<div style="font-size:.65rem;color:var(--text2);margin-top:.15rem;padding-left:1.3rem">${n.body}</div>`:''}
+    </div>`}).join('');
+}
+
+function timeAgo(iso){
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  if(s<60)return 'À l\'instant';
+  if(s<3600)return Math.floor(s/60)+'min';
+  if(s<86400)return Math.floor(s/3600)+'h';
+  return Math.floor(s/86400)+'j';
+}
+
+function markNotifRead(id){
+  const notifs=getNotifs();
+  const n=notifs.find(x=>x.id===id);
+  if(n)n.read=true;
+  saveNotifs(notifs);
+  updateNotifBadge();
+  renderNotifs();
+}
+
+function clearNotifs(){
+  const notifs=getNotifs();
+  notifs.forEach(n=>n.read=true);
+  saveNotifs(notifs);
+  updateNotifBadge();
+  renderNotifs();
+}
+
+// Auto-generate notifications from activity
+function checkForNewNotifs(){
+  const orders=LS.get('vc_orders',[]);
+  const pending=orders.filter(o=>o.status==='pending');
+  const tickets=LS.get('vc_tickets',[]);
+  const openTickets=tickets.filter(t=>t.status==='open');
+  const lastCheck=LS.get('vc_notif_lastcheck',0);
+  const now=Date.now();
+  
+  // New orders since last check
+  pending.forEach(o=>{
+    if(new Date(o.date).getTime()>lastCheck){
+      addNotif('Nouvelle commande',`${o.user} - ${o.items?.length||0} cartes`,'order');
+    }
+  });
+  // New tickets
+  openTickets.forEach(t=>{
+    if(new Date(t.date).getTime()>lastCheck){
+      addNotif('Nouveau ticket support',`${t.user}: ${t.subject||'Sans objet'}`,'user');
+    }
+  });
+  // Low stock alerts
+  const prods=LS.get('vc_products',[]);
+  prods.forEach(p=>{
+    if(p.stock<=3&&p.stock>0){
+      addNotif('Stock faible',`${p.name}: ${p.stock} restants`,'stock');
+    }
+  });
+  
+  LS.set('vc_notif_lastcheck',now);
+  updateNotifBadge();
+}
+
+// ==================== 11. CARDS BROWSER ====================
+let _cardsEditData=null; // {prodId, cardIdx} for current edit
+
+function renderCards(){
+  const prods=LS.get('vc_products',[]);
+  const manualPrices=LS.get('vc_manual_prices',{});
+  
+  // Populate set filter if empty
+  const filterProd=document.getElementById('cardFilterProd');
+  if(filterProd.options.length<=1){
+    prods.forEach(p=>{
+      if(p.pool&&p.pool.length){
+        const opt=document.createElement('option');
+        opt.value=p.id;
+        opt.textContent=`${p.name} (${p.pool.length} cartes)`;
+        filterProd.appendChild(opt);
+      }
+    });
+  }
+  
+  // Gather all cards from all products
+  let allCards=[];
+  prods.forEach(p=>{
+    if(!p.pool)return;
+    p.pool.forEach((c,idx)=>{
+      const manualKey=`${p.id}_${c.localId}`;
+      allCards.push({
+        ...c,
+        prodId:p.id,
+        prodName:p.name,
+        series:p.series||p.sub||'',
+        cardIdx:idx,
+        isManual:!!manualPrices[manualKey],
+        manualPrice:manualPrices[manualKey]?.price
+      });
+    });
+  });
+  
+  // Stats
+  const withPrice=allCards.filter(c=>c.cmPrice>0).length;
+  const manualCount=Object.keys(manualPrices).length;
+  const totalVal=allCards.reduce((s,c)=>s+(c.cmPrice||c.v||0),0);
+  document.getElementById('cardsTotal').textContent=allCards.length;
+  document.getElementById('cardsWithPrice').textContent=withPrice;
+  document.getElementById('cardsManual').textContent=manualCount;
+  document.getElementById('cardsTotalVal').textContent=totalVal.toFixed(0)+'€';
+  
+  // Apply filters
+  const fProd=filterProd.value;
+  const fRar=document.getElementById('cardFilterRarity').value;
+  const fSearch=document.getElementById('cardFilterSearch').value.toLowerCase();
+  const fSort=document.getElementById('cardFilterSort').value;
+  
+  if(fProd)allCards=allCards.filter(c=>String(c.prodId)===fProd);
+  if(fRar)allCards=allCards.filter(c=>c.r===fRar);
+  if(fSearch)allCards=allCards.filter(c=>c.name.toLowerCase().includes(fSearch)||String(c.localId).includes(fSearch));
+  
+  // Sort
+  const rarOrder={secret:5,ultra:4,rare:3,uncommon:2,common:1};
+  if(fSort==='name')allCards.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(fSort==='price-desc')allCards.sort((a,b)=>(b.cmPrice||b.v||0)-(a.cmPrice||a.v||0));
+  else if(fSort==='price-asc')allCards.sort((a,b)=>(a.cmPrice||a.v||0)-(b.cmPrice||b.v||0));
+  else if(fSort==='rarity')allCards.sort((a,b)=>(rarOrder[b.r]||0)-(rarOrder[a.r]||0));
+  else allCards.sort((a,b)=>(parseInt(a.localId)||0)-(parseInt(b.localId)||0));
+  
+  document.getElementById('cardsFilterCount').textContent=allCards.length;
+  
+  // Render grid (limit to 200 for performance)
+  const display=allCards.slice(0,200);
+  const rCol={common:'#666',uncommon:'#22c55e',rare:'#3b82f6',ultra:'#eab308',secret:'#a855f7'};
+  const rLbl={common:'C',uncommon:'U',rare:'R',ultra:'UR',secret:'S'};
+  
+  document.getElementById('cardsGrid').innerHTML=display.map(c=>{
+    const price=(c.cmPrice||c.v||0).toFixed(2);
+    const imgUrl=c.imgLow||c.img||'';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.4rem;cursor:pointer;transition:all .15s;position:relative${c.isManual?';border-color:var(--fire)':''}" onclick="openCardEdit(${c.prodId},${c.cardIdx})" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='${c.isManual?'var(--fire)':'var(--border)'}'">
+      ${c.isManual?'<div style="position:absolute;top:4px;right:4px;font-size:.55rem;background:var(--fire);color:#fff;padding:1px 5px;border-radius:4px">MODIFIÉ</div>':''}
+      <div style="display:flex;gap:.4rem;align-items:flex-start">
+        ${imgUrl?`<img src="${imgUrl}" style="width:60px;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">`:''}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+          <div style="font-size:.6rem;color:var(--text2)">${c.prodName}</div>
+          <div style="display:flex;align-items:center;gap:.3rem;margin-top:.2rem">
+            <span style="font-size:.55rem;padding:1px 5px;border-radius:3px;background:${rCol[c.r]}22;color:${rCol[c.r]};font-weight:600">${rLbl[c.r]}</span>
+            <span style="font-size:.55rem;color:var(--text2)">#${c.localId}${c.setOfficial?'/'+c.setOfficial:''}</span>
+          </div>
+          <div style="font-family:'JetBrains Mono','Fira Code',monospace;font-size:.8rem;font-weight:700;margin-top:.2rem;color:${parseFloat(price)>5?'var(--green)':'var(--text)'}">${price}€</div>
+          ${c.cmPrice>0?'<div style="font-size:.5rem;color:var(--text2)">📊 Cardmarket</div>':''}
+        </div>
+      </div>
+    </div>`}).join('');
+    
+  if(allCards.length>200){
+    document.getElementById('cardsGrid').innerHTML+=`<div style="grid-column:1/-1;text-align:center;padding:1rem;color:var(--text2);font-size:.75rem">Affichage limité à 200 cartes. Utilisez les filtres pour affiner.</div>`;
+  }
+}
+
+function openCardEdit(prodId,cardIdx){
+  const prods=LS.get('vc_products',[]);
+  const prod=prods.find(p=>p.id===prodId);
+  if(!prod||!prod.pool||!prod.pool[cardIdx])return;
+  const c=prod.pool[cardIdx];
+  _cardsEditData={prodId,cardIdx,localId:c.localId};
+  
+  const imgEl=document.getElementById('ceImg');
+  imgEl.src=c.imgLow||c.img||'';
+  imgEl.style.display=(c.imgLow||c.img)?'':'none';
+  
+  document.getElementById('ceName').textContent=c.name;
+  document.getElementById('ceSet').textContent=prod.name+(c.series?' — '+c.series:'');
+  document.getElementById('ceNum').textContent=`#${c.localId}${c.setOfficial?'/'+c.setOfficial:''} • ${c.tcgId||''}`;
+  
+  const rCol={common:'#666',uncommon:'#22c55e',rare:'#3b82f6',ultra:'#eab308',secret:'#a855f7'};
+  const rLbl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+  document.getElementById('ceRarity').innerHTML=`<span style="font-size:.7rem;padding:2px 8px;border-radius:4px;background:${rCol[c.r]||'#666'}22;color:${rCol[c.r]||'#666'};font-weight:600">${c.rarityName||rLbl[c.r]||c.r}</span>`;
+  
+  document.getElementById('cePrice').value=(c.cmPrice||c.v||0).toFixed(2);
+  document.getElementById('ceRarSelect').value=c.r||'common';
+  document.getElementById('ceNameEdit').value=c.name;
+  
+  // Cardmarket info
+  let cmInfo='';
+  if(c.cmPrice>0){
+    cmInfo=`<div style="margin-top:.3rem;padding:.3rem;background:rgba(99,102,241,.08);border-radius:6px">
+      <strong>📊 Données Cardmarket :</strong> Tendance ${c.cmTrend?.toFixed(2)||'?'}€ • Plus bas ${c.cmLow?.toFixed(2)||'?'}€ • Moy 30j ${c.cmAvg30?.toFixed(2)||'?'}€
+      ${c.cmUpdated?'<br>MàJ: '+new Date(c.cmUpdated).toLocaleDateString('fr-FR'):''}
+    </div>`;
+  }
+  const manualPrices=LS.get('vc_manual_prices',{});
+  const manualKey=`${prodId}_${c.localId}`;
+  if(manualPrices[manualKey]){
+    cmInfo+=`<div style="margin-top:.2rem;color:var(--fire);font-weight:600">⚠️ Prix modifié manuellement le ${new Date(manualPrices[manualKey].date).toLocaleDateString('fr-FR')} (sera mis à jour auto dans 24h)</div>`;
+  }
+  document.getElementById('ceCmInfo').innerHTML=cmInfo;
+  
+  openMod('cardEditModal');
+}
+
+function saveCardEdit(){
+  if(!_cardsEditData)return;
+  const {prodId,cardIdx,localId}=_cardsEditData;
+  const prods=LS.get('vc_products',[]);
+  const prod=prods.find(p=>p.id===prodId);
+  if(!prod||!prod.pool||!prod.pool[cardIdx])return;
+  
+  const newPrice=parseFloat(document.getElementById('cePrice').value)||0;
+  const newRar=document.getElementById('ceRarSelect').value;
+  const newName=document.getElementById('ceNameEdit').value.trim();
+  
+  const c=prod.pool[cardIdx];
+  const oldPrice=c.cmPrice||c.v||0;
+  
+  // Update card data
+  if(newName)c.name=newName;
+  c.r=newRar;
+  c.v=newPrice;
+  c.cmPrice=newPrice;
+  c.cmTrend=newPrice;
+  
+  // Track manual price change (will be auto-refreshed after 24h)
+  if(Math.abs(newPrice-oldPrice)>0.01){
+    const manualPrices=LS.get('vc_manual_prices',{});
+    manualPrices[`${prodId}_${localId}`]={
+      price:newPrice,
+      oldPrice:oldPrice,
+      date:new Date().toISOString()
+    };
+    LS.set('vc_manual_prices',manualPrices);
+    addNotif('Prix modifié',`${c.name} : ${oldPrice.toFixed(2)}€ → ${newPrice.toFixed(2)}€`,'price');
+  }
+  
+  LS.set('vc_products',prods);
+  logActivity(`Carte modifiée: ${c.name}`,'Admin',`Prix: ${newPrice.toFixed(2)}€, Rareté: ${newRar}`);
+  toast(`${c.name} mis à jour !`);
+  closeMod('cardEditModal');
+  renderCards();
+}
+
+// Refresh all prices from TCGdex (clears manual overrides older than 24h)
+function refreshAllPrices(){
+  // Clear manual overrides older than 24h
+  const manualPrices=LS.get('vc_manual_prices',{});
+  const now=Date.now();
+  let cleared=0;
+  Object.keys(manualPrices).forEach(k=>{
+    if(now-new Date(manualPrices[k].date).getTime()>24*60*60*1000){
+      delete manualPrices[k];
+      cleared++;
+    }
+  });
+  LS.set('vc_manual_prices',manualPrices);
+  
+  // Clear TCGdex price cache to force re-fetch on main site
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith('vc_tcgdex_prices_'))localStorage.removeItem(k);
+  });
+  // Bump global version to force refresh
+  const ver=parseInt(localStorage.getItem('vc_tcgdex_global_ver')||'0')+1;
+  localStorage.setItem('vc_tcgdex_global_ver',String(ver));
+  
+  addNotif('Prix rafraîchis',`Cache vidé, ${cleared} prix manuels expirés réinitialisés. Les prix seront mis à jour au prochain chargement du site.`,'price');
+  toast(`Prix réinitialisés ! ${cleared} prix manuels expirés. Rechargez le site principal.`);
+  renderCards();
+}
+
+// ==================== INIT ====================
+checkForNewNotifs();
+updateNotifBadge();
+// Load products from API first, then render dashboard
+loadAdminProducts().then(()=>{
+  renderDash();
+  console.log('✅ Admin: produits chargés depuis l\'API');
+}).catch(()=>renderDash());
+
+// ==================== SOCKET.IO — TEMPS RÉEL ====================
+let _socket=null;
+try{
+  _socket=typeof io!=='undefined'?io({reconnection:true,reconnectionDelay:2000}):null;
+}catch(e){console.log('Socket.io not available')}
+
+if(_socket){
+  _socket.on('connect',()=>{
+    _socket.emit('admin:join');
+    const dot=document.getElementById('syncDot');
+    const label=document.getElementById('syncLabel');
+    if(dot)dot.className='sync-dot ok';
+    if(label)label.textContent='🟢 Connecté en direct';
+    console.log('🔌 Admin connecté au serveur temps réel');
+  });
+  
+  _socket.on('disconnect',()=>{
+    const dot=document.getElementById('syncDot');
+    const label=document.getElementById('syncLabel');
+    if(dot)dot.className='sync-dot';
+    if(label)label.textContent='🔴 Déconnecté';
+  });
+  
+  // Receive activity from clients (purchases, registrations, tickets...)
+  _socket.on('sync:activity',(data)=>{
+    console.log('📡 Activité client:',data.type);
+    if(data.type==='purchase'||data.type==='user_online'){
+      if(document.querySelector('#p-dash.on'))renderDash();
+    }
+    if(data.type==='purchase'){
+      if(document.querySelector('#p-stock.on'))renderStock();
+      if(document.querySelector('#p-orders.on'))renderOrders();
+      addNotif('Nouvelle commande',`${data.user||'?'} — ${data.detail||''}`,'order');
+    }
+    if(data.type==='ticket'){
+      if(document.querySelector('#p-support.on'))renderTickets();
+      addNotif('Nouveau ticket',`${data.user||'?'} — ${data.detail||''}`,'user');
+    }
+    if(data.type==='register'){
+      if(document.querySelector('#p-users.on'))renderUsers();
+      addNotif('Nouvel utilisateur',`${data.user||'?'} s'est inscrit`,'user');
+    }
+    checkForNewNotifs();
+  });
+}
+
+// Helper: broadcast change to all clients via Socket.io
+function syncToClients(type, payload, extra){
+  // Always save to localStorage (for same-browser tabs)
+  // Socket.io push for cross-device
+  if(_socket&&_socket.connected){
+    _socket.emit('admin:sync',{type,payload,...(extra||{})});
+    console.log(`📡 Envoyé: ${type}`);
+  }
+}
+
+// Override LS.set to auto-broadcast relevant changes
+const _origLSSet=LS.set.bind(LS);
+LS.set=function(key,val){
+  _origLSSet(key,val);
+  // Auto-broadcast to clients
+  if(key==='vc_products')syncToClients('products',val);
+  if(key==='vc_settings')syncToClients('settings',val);
+  if(key==='vc_mkt_settings')syncToClients('mkt_settings',val);
+  if(key==='vc_series')syncToClients('series',val);
+  if(key==='vc_tcg')syncToClients('tcg',val);
+  // User-specific data
+  if(key&&key.startsWith('vc_data_')){
+    const userId=key.replace('vc_data_','');
+    syncToClients('user_data',val,{userId});
+  }
+};
+
+// Also keep localStorage sync for same-browser
+// Listen for settings changes via Socket.io
+if(typeof _socket !== 'undefined' && _socket) {
+  _socket.on('settings:updated', (data) => {
+    fetch(`/api/settings/${data.key}`).then(r=>r.json()).then(d=>{
+      if(d.value!==undefined) _cache[data.key]=d.value;
+      if(document.querySelector('#p-stock.on'))renderStock();
+      if(document.querySelector('#p-dash.on'))renderDash();
+    }).catch(()=>{});
+  });
+  _socket.on('product:created', () => loadAdminProducts().then(renderStock));
+  _socket.on('product:updated', () => loadAdminProducts().then(renderStock));
+  _socket.on('product:deleted', () => loadAdminProducts().then(renderStock));
+}
+</script>
+</body>
+</html>
