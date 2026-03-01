@@ -462,7 +462,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
     <div style="display:flex;gap:0;margin-bottom:1rem;background:var(--vc-bg-card);border-radius:8px;padding:3px;border:1px solid var(--vc-border)">
       <button id="trTabAll" onclick="tradeTab('all')" style="flex:1;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));border:0;color:#fff;font-family:'Chakra Petch';font-weight:600;padding:.5rem;cursor:pointer;border-radius:6px;font-size:.75rem;transition:all .2s">Tous les échanges</button>
       <button id="trTabMine" onclick="tradeTab('mine')" style="flex:1;background:0;border:0;color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;padding:.5rem;cursor:pointer;border-radius:6px;font-size:.75rem;transition:all .2s">Mes annonces</button>
-      <button id="trTabOffers" onclick="tradeTab('offers')" style="flex:1;background:0;border:0;color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;padding:.5rem;cursor:pointer;border-radius:6px;font-size:.75rem;transition:all .2s">Mes offres</button>
+      <button id="trTabOffers" onclick="tradeTab('offers')" style="flex:1;background:0;border:0;color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;padding:.5rem;cursor:pointer;border-radius:6px;font-size:.75rem;transition:all .2s;position:relative">Mes offres<span id="trTabOffersBadge" style="display:none;position:absolute;top:2px;right:8px;min-width:16px;height:16px;background:#ef4444;color:#fff;border-radius:50%;font-size:.55rem;font-weight:700;align-items:center;justify-content:center;font-family:'JetBrains Mono';animation:tradePulse 2s infinite"></span></button>
     </div>
     <!-- Search/Filter -->
     <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
@@ -2613,13 +2613,13 @@ let _tradePendingOffers=0;
 
 function updateTradeNotif(count){
   _tradePendingOffers=count;
-  const dBadge=document.getElementById('tradeNotifD');
-  const mBadge=document.getElementById('tradeNotifM');
-  if(count>0){
-    [dBadge,mBadge].forEach(b=>{if(b){b.style.display='flex';b.textContent=count>9?'9+':count}});
-  }else{
-    [dBadge,mBadge].forEach(b=>{if(b)b.style.display='none'});
-  }
+  const badges=['tradeNotifD','tradeNotifM','trTabOffersBadge'];
+  badges.forEach(id=>{
+    const b=document.getElementById(id);
+    if(!b)return;
+    if(count>0){b.style.display='flex';b.textContent=count>9?'9+':count}
+    else{b.style.display='none'}
+  });
 }
 
 // Check for pending offers periodically
@@ -2752,20 +2752,85 @@ function tradeOfferCard(o, dir){
   const statusColors={pending:'var(--vc-gold)',accepted:'var(--vc-green)',rejected:'#ef4444',cancelled:'var(--vc-text-dim)'};
   const statusLabels={pending:'⏳ En attente',accepted:'✅ Acceptée',rejected:'❌ Refusée',cancelled:'🚫 Annulée'};
   const cards=o.offeredCards||[];
+  const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
   
-  return `<div style="background:var(--vc-bg-card);border:1px solid var(--vc-border);border-radius:10px;padding:.8rem;margin-bottom:.5rem">
+  return `<div style="background:var(--vc-bg-card);border:1px solid var(--vc-border);border-radius:10px;padding:.8rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .2s" onclick="viewOfferDetail('${o._id}','${dir}')" onmouseover="this.style.borderColor='var(--vc-primary)'" onmouseout="this.style.borderColor='var(--vc-border)'">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
       <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De @'+o.fromUsername:'À @'+o.toUsername}</div>
       <span style="font-size:.65rem;color:${statusColors[o.status]};font-weight:600">${statusLabels[o.status]}</span>
     </div>
-    ${cards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${cards.slice(0,4).map(c=>`<div style="width:40px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--vc-border);background:var(--vc-bg-surface)">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`).join('')}</div>`:''}
+    ${cards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${cards.slice(0,6).map(c=>{
+      const col=rCol[c.rarity]||'#94a3b8';
+      return `<div style="width:40px;height:56px;border-radius:4px;overflow:hidden;border:1px solid ${col}44;background:var(--vc-bg-surface)">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`;
+    }).join('')}${cards.length>6?`<div style="width:40px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:.65rem;color:var(--vc-text-dim)">+${cards.length-6}</div>`:''}</div>`:''}
     ${o.moneyOffer?`<div style="font-size:.7rem;color:var(--vc-gold)">💰 +${o.moneyOffer.toFixed(2)}€</div>`:''}
     ${o.message?`<div style="font-size:.68rem;color:var(--vc-text-dim);font-style:italic;margin-top:.2rem">"${o.message}"</div>`:''}
-    ${dir==='received'&&o.status==='pending'?`<div style="display:flex;gap:.3rem;margin-top:.5rem">
-      <button onclick="respondOffer('${o._id}','accept')" style="flex:1;padding:.4rem;border-radius:6px;border:0;background:var(--vc-green);color:#fff;font-family:'Chakra Petch';font-weight:700;font-size:.72rem;cursor:pointer">✅ Accepter</button>
-      <button onclick="respondOffer('${o._id}','reject')" style="flex:1;padding:.4rem;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-family:'Chakra Petch';font-weight:600;font-size:.72rem;cursor:pointer">❌ Refuser</button>
-    </div>`:''}
+    <div style="font-size:.6rem;color:var(--vc-text-dim);margin-top:.3rem;text-align:right">Cliquer pour voir les détails →</div>
   </div>`;
+}
+
+// View detailed offer before accepting/rejecting
+function viewOfferDetail(offerId, dir){
+  const o=(_tradeMyOffers.received||[]).find(x=>x._id===offerId)||(_tradeMyOffers.sent||[]).find(x=>x._id===offerId);
+  if(!o)return;
+  
+  const cards=o.offeredCards||[];
+  const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
+  const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+  const totalVal=cards.reduce((s,c)=>s+(c.value||0),0);
+  const statusColors={pending:'var(--vc-gold)',accepted:'var(--vc-green)',rejected:'#ef4444',cancelled:'var(--vc-text-dim)'};
+  const statusLabels={pending:'⏳ En attente',accepted:'✅ Acceptée',rejected:'❌ Refusée',cancelled:'🚫 Annulée'};
+  
+  const cardsGrid=cards.map(c=>{
+    const col=rCol[c.rarity]||'#94a3b8';
+    return `<div style="text-align:center">
+      <div style="width:80px;height:112px;border-radius:6px;overflow:hidden;border:2px solid ${col}55;box-shadow:0 4px 12px ${col}22;margin:0 auto .3rem">
+        ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:1.5rem">🎴</div>`}
+      </div>
+      <div style="font-size:.65rem;font-weight:600">${c.name}</div>
+      <div style="font-size:.55rem;color:${col}">${rl[c.rarity]||''}</div>
+      <div style="font-size:.6rem;color:var(--vc-gold);font-family:'JetBrains Mono'">${(c.value||0).toFixed(2)}€</div>
+    </div>`;
+  }).join('');
+  
+  document.getElementById('tradeDetailContent').innerHTML=`
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(52,211,153,.1));padding:1rem 1.2rem;border-bottom:1px solid var(--vc-border)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'Exo 2';font-weight:800;font-size:.95rem">📋 Détail de l'offre</div>
+          <div style="font-size:.68rem;color:var(--vc-text-dim)">${dir==='received'?'De @'+o.fromUsername:'À @'+o.toUsername} • ${timeAgo(o.createdAt)}</div>
+        </div>
+        <span style="font-size:.7rem;color:${statusColors[o.status]};font-weight:700;background:${statusColors[o.status]}15;padding:.2rem .5rem;border-radius:6px">${statusLabels[o.status]}</span>
+      </div>
+    </div>
+    <div style="padding:1rem 1.2rem">
+      <!-- Cards grid -->
+      <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🃏 ${cards.length} carte${cards.length>1?'s':''} proposée${cards.length>1?'s':''}</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:.8rem">
+        ${cardsGrid}
+      </div>
+      
+      <!-- Summary -->
+      <div style="background:var(--vc-bg-surface);border-radius:8px;padding:.6rem;margin-bottom:.6rem;font-size:.72rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.2rem">
+          <span style="color:var(--vc-text-dim)">Valeur totale</span>
+          <span style="font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalVal.toFixed(2)}€</span>
+        </div>
+        ${o.moneyOffer?`<div style="display:flex;justify-content:space-between">
+          <span style="color:var(--vc-text-dim)">💵 Compensation €</span>
+          <span style="font-family:'JetBrains Mono';color:var(--vc-green);font-weight:700">+${o.moneyOffer.toFixed(2)}€</span>
+        </div>`:''}
+      </div>
+      
+      ${o.message?`<div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:6px;padding:.5rem;margin-bottom:.6rem;font-size:.7rem;color:var(--vc-text-dim);font-style:italic">💬 "${o.message}"</div>`:''}
+      
+      <!-- Actions -->
+      ${dir==='received'&&o.status==='pending'?`<div style="display:flex;gap:.4rem;margin-top:.5rem">
+        <button onclick="event.stopPropagation();cMod('tradeDetailM');respondOffer('${o._id}','accept')" style="flex:1;padding:.6rem;border-radius:8px;border:0;background:var(--vc-green);color:#fff;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">✅ Accepter l'offre</button>
+        <button onclick="event.stopPropagation();cMod('tradeDetailM');respondOffer('${o._id}','reject')" style="flex:1;padding:.6rem;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">❌ Refuser</button>
+      </div>`:`<button onclick="cMod('tradeDetailM')" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;cursor:pointer;margin-top:.3rem">Fermer</button>`}
+    </div>`;
+  document.getElementById('tradeDetailM').classList.add('on');
 }
 
 function timeAgo(date){
@@ -3044,21 +3109,22 @@ async function submitTradeOffer(){
   finally{btn.disabled=false;btn.textContent='Envoyer l\'offre'}
 }
 
+let _tradeRevealActive=false;
+
 async function respondOffer(offerId, action){
   try{
-    // Find the offer data before responding
     const offer=(_tradeMyOffers.received||[]).find(o=>o._id===offerId)||(_tradeMyOffers.sent||[]).find(o=>o._id===offerId);
     
     await API('/trades/offers/'+offerId+'/respond',{method:'POST',body:JSON.stringify({action})});
     
     if(action==='accept'&&offer&&offer.offeredCards&&offer.offeredCards.length){
-      // Show card reveal animation — DON'T close modal or reload yet
+      _tradeRevealActive=true;
       showTradeAcceptReveal(offer);
-      // Reload data in background (cards have been swapped server-side)
+      // Reload data in background silently
       setTimeout(async()=>{
         await reloadUserData();
-        await loadTrades();
-      },500);
+        // Don't renderTrades — keep reveal open
+      },1000);
     }else{
       toast(action==='accept'?'✅ Offre acceptée !':'❌ Offre refusée','ok');
       await loadTrades();renderTrades();
@@ -3083,7 +3149,8 @@ async function reloadUserData(){
         if(data.negoHistory)negoHistory=data.negoHistory;
       }
     }
-    renderColl();renderTx();
+    // Only render if reveal is NOT active
+    if(!_tradeRevealActive){renderColl();renderTx()}
   }catch(e){console.error('Reload data:',e)}
 }
 
@@ -3165,11 +3232,10 @@ function showTradeAcceptReveal(offer){
 }
 
 function tradeAcceptAction(action, cards){
+  _tradeRevealActive=false; // Release lock
   if(action==='receive'){
-    // Cards are already in collection (server swapped them), add to ship cart
     let added=0;
     cards.forEach(c=>{
-      // Find the card in our collection by name+img match (since IDs may differ after swap)
       const existing=coll.find(x=>(x.name===c.name&&x.img===c.img)&&!shipCart.includes(x.id)&&!shipCart.includes(String(x.id)));
       if(existing){
         shipCart.push(existing.id);
@@ -3180,7 +3246,7 @@ function tradeAcceptAction(action, cards){
     toast(`📦 ${added} carte(s) ajoutée(s) au panier d'envoi !`,'ok');
   }
   cMod('tradeDetailM');
-  // Now safe to reload trades view
+  renderColl();renderTx();
   loadTrades().then(()=>renderTrades());
 }
 
@@ -3338,8 +3404,7 @@ if(_socket){
     if(currentUser&&data.toUserId===currentUser.id){
       checkTradeNotifs();
       toast(`🔄 Nouvelle offre d'échange de @${data.fromUsername}`,'ok');
-      // Auto-reload trades if on trade page
-      if(document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
+      if(!_tradeRevealActive&&document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
         loadTrades().then(()=>renderTrades());
       }
     }
@@ -3350,14 +3415,13 @@ if(_socket){
       if(data.fromUserId===currentUser.id){
         toast(data.action==='accept'?`✅ @${data.toUsername} a accepté votre offre !`:`❌ @${data.toUsername} a refusé votre offre`,'ok');
       }
-      if(document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
+      if(!_tradeRevealActive&&document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
         loadTrades().then(()=>renderTrades());
       }
     }
   });
   _socket.on('trade:dataChanged',(data)=>{
     if(currentUser&&data.userIds&&data.userIds.includes(currentUser.id)){
-      // Server swapped cards — reload our data
       console.log('🔄 Trade data changed, reloading...');
       reloadUserData();
     }
