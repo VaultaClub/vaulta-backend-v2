@@ -412,7 +412,14 @@ router.post('/2fa/disable', auth, async (req, res) => {
 router.post('/logout', (req, res) => { res.clearCookie('token'); res.json({ message: 'Déconnecté' }); });
 
 // GET /api/auth/me
-router.get('/me', auth, (req, res) => res.json(User.safeUser(req.user)));
+router.get('/me', auth, async (req, res) => {
+  // Generate referral code for existing users who don't have one
+  if (!req.user.referralCode) {
+    req.user.referralCode = req.user.username.toUpperCase().slice(0, 4) + require('crypto').randomBytes(3).toString('hex').toUpperCase();
+    await req.user.save();
+  }
+  res.json(User.safeUser(req.user));
+});
 
 // PUT /api/auth/profile
 router.put('/profile', auth, async (req, res) => {
