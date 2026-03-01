@@ -2708,11 +2708,12 @@ function renderTrades(){
     grid.innerHTML=items.map(l=>tradeListingCard(l,false)).join('');
     
   }else if(_tradeTab==='mine'){
-    if(!_tradeMyListings.length){
-      grid.innerHTML='<div class="empty"><div class="ei">📭</div><div class="et">Vous n\'avez pas d\'annonce</div><div class="es">Proposez vos cartes à l\'échange !</div></div>';
+    const activeListings=_tradeMyListings.filter(l=>l.status==='active');
+    if(!activeListings.length){
+      grid.innerHTML='<div class="empty"><div class="ei">📭</div><div class="et">Vous n\'avez pas d\'annonce active</div><div class="es">Proposez vos cartes à l\'échange !</div></div>';
       return;
     }
-    grid.innerHTML=_tradeMyListings.map(l=>tradeListingCard(l,true)).join('');
+    grid.innerHTML=activeListings.map(l=>tradeListingCard(l,true)).join('');
     
   }else if(_tradeTab==='offers'){
     const recv=_tradeMyOffers.received||[];
