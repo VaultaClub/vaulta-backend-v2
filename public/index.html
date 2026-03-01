@@ -2611,6 +2611,7 @@ let _tradeMyListings=[];
 let _tradeMyOffers={received:[],sent:[]};
 let _tradeSelectedCards=[];
 let _tradePendingOffers=0;
+let _tradeListingCache={}; // Cache listings by ID for offer detail view
 
 function updateTradeNotif(count){
   _tradePendingOffers=count;
@@ -2668,6 +2669,22 @@ async function loadTrades(){
     _tradeListings=(results[0].status==='fulfilled'?results[0].value.listings:[])||[];
     _tradeMyListings=(results[1].status==='fulfilled'?results[1].value.listings:[])||[];
     _tradeMyOffers=(results[2].status==='fulfilled'?results[2].value:{received:[],sent:[]})||{received:[],sent:[]};
+    
+    // Cache all known listings
+    [..._tradeListings,..._tradeMyListings].forEach(l=>{_tradeListingCache[l._id]=l});
+    
+    // Fetch missing listings for accepted offers (in background)
+    const allOffers=[...(_tradeMyOffers.received||[]),...(_tradeMyOffers.sent||[])];
+    const missingIds=[...new Set(allOffers.filter(o=>o.status==='accepted'&&!_tradeListingCache[o.listingId]).map(o=>o.listingId))];
+    if(missingIds.length){
+      const fetches=await Promise.allSettled(missingIds.map(id=>API('/trades/listing/'+id)));
+      fetches.forEach(r=>{
+        if(r.status==='fulfilled'&&r.value.listing){
+          _tradeListingCache[r.value.listing._id]=r.value.listing;
+        }
+      });
+    }
+    
     // Update notification badge
     const pending=(_tradeMyOffers.received||[]).filter(o=>o.status==='pending').length;
     updateTradeNotif(pending);
@@ -2752,22 +2769,41 @@ function tradeListingCard(l, isMine){
 function tradeOfferCard(o, dir){
   const statusColors={pending:'var(--vc-gold)',accepted:'var(--vc-green)',rejected:'#ef4444',cancelled:'var(--vc-text-dim)'};
   const statusLabels={pending:'⏳ En attente',accepted:'✅ Acceptée',rejected:'❌ Refusée',cancelled:'🚫 Annulée'};
-  const cards=o.offeredCards||[];
+  const offeredCards=o.offeredCards||[];
   const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
+  const listing=_tradeListingCache[o.listingId];
+  const listingCards=listing?.cards||[];
   
-  // For accepted offers, try to find the listing to show what was exchanged
-  let exchangeInfo='';
-  if(o.status==='accepted'){
-    // Find the listing in all listings or my listings
-    const listing=[..._tradeListings,..._tradeMyListings].find(l=>l._id===o.listingId);
-    if(listing&&listing.cards){
-      const listingCardsPreview=listing.cards.slice(0,3).map(c=>`<div style="width:28px;height:39px;border-radius:3px;overflow:hidden;border:1px solid ${(rCol[c.rarity]||'#94a3b8')}44">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`).join('');
-      exchangeInfo=`<div style="display:flex;align-items:center;gap:.4rem;margin-top:.3rem;padding-top:.3rem;border-top:1px dashed var(--vc-border);font-size:.62rem;color:var(--vc-text-dim)">
-        <span>🔄 Contre:</span>
-        <div style="display:flex;gap:2px">${listingCardsPreview}</div>
-        <span style="color:var(--vc-gold);font-family:'JetBrains Mono'">${listing.totalValue?.toFixed(2)||'?'}€</span>
-      </div>`;
-    }
+  // Perspective: what did I give vs what did I get
+  // dir=received: I'm the listing owner → I gave listingCards, I got offeredCards
+  // dir=sent: I'm the offer sender → I gave offeredCards, I got listingCards
+  const iGave=dir==='received'?listingCards:offeredCards;
+  const iGot=dir==='received'?offeredCards:listingCards;
+  const otherUser=dir==='received'?o.fromUsername:o.toUsername;
+  
+  const makePreview=(cards)=>cards.slice(0,3).map(c=>{
+    const col=rCol[c.rarity]||'#94a3b8';
+    return `<div style="width:32px;height:44px;border-radius:3px;overflow:hidden;border:1px solid ${col}44;flex-shrink:0">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`;
+  }).join('')+(cards.length>3?`<span style="font-size:.55rem;color:var(--vc-text-dim)">+${cards.length-3}</span>`:'');
+  
+  // Exchange summary for accepted offers
+  let exchangeHTML='';
+  if(o.status==='accepted'&&iGave.length&&iGot.length){
+    const gaveVal=iGave.reduce((s,c)=>s+(c.value||0),0);
+    const gotVal=iGot.reduce((s,c)=>s+(c.value||0),0);
+    exchangeHTML=`<div style="margin-top:.4rem;padding-top:.4rem;border-top:1px dashed var(--vc-border)">
+      <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem">
+        <div style="flex:1">
+          <div style="color:var(--vc-text-dim);margin-bottom:.15rem">📤 Vous avez donné</div>
+          <div style="display:flex;gap:2px;align-items:center">${makePreview(iGave)} <span style="color:#ef4444;font-family:'JetBrains Mono';font-size:.58rem">${gaveVal.toFixed(2)}€</span></div>
+        </div>
+        <div style="font-size:.8rem;color:var(--vc-text-dim)">⇄</div>
+        <div style="flex:1;text-align:right">
+          <div style="color:var(--vc-text-dim);margin-bottom:.15rem">📥 Vous avez reçu</div>
+          <div style="display:flex;gap:2px;align-items:center;justify-content:flex-end">${makePreview(iGot)} <span style="color:var(--vc-green);font-family:'JetBrains Mono';font-size:.58rem">${gotVal.toFixed(2)}€</span></div>
+        </div>
+      </div>
+    </div>`;
   }
   
   return `<div style="background:var(--vc-bg-card);border:1px solid ${o.status==='accepted'?'rgba(52,211,153,.3)':o.status==='pending'?'rgba(251,191,36,.2)':'var(--vc-border)'};border-radius:10px;padding:.8rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .2s" onclick="viewOfferDetail('${o._id}','${dir}')" onmouseover="this.style.borderColor='var(--vc-primary)'" onmouseout="this.style.borderColor='${o.status==='accepted'?'rgba(52,211,153,.3)':'var(--vc-border)'}'" >
@@ -2775,82 +2811,87 @@ function tradeOfferCard(o, dir){
       <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De @'+o.fromUsername:'À @'+o.toUsername}</div>
       <span style="font-size:.65rem;color:${statusColors[o.status]};font-weight:600">${statusLabels[o.status]}</span>
     </div>
-    ${cards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${cards.slice(0,6).map(c=>{
+    ${offeredCards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${offeredCards.slice(0,6).map(c=>{
       const col=rCol[c.rarity]||'#94a3b8';
       return `<div style="width:40px;height:56px;border-radius:4px;overflow:hidden;border:1px solid ${col}44;background:var(--vc-bg-surface)">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`;
-    }).join('')}${cards.length>6?`<div style="width:40px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:.65rem;color:var(--vc-text-dim)">+${cards.length-6}</div>`:''}</div>`:''}
+    }).join('')}${offeredCards.length>6?`<div style="width:40px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:.65rem;color:var(--vc-text-dim)">+${offeredCards.length-6}</div>`:''}</div>`:''}
     ${o.moneyOffer?`<div style="font-size:.7rem;color:var(--vc-gold)">💰 +${o.moneyOffer.toFixed(2)}€</div>`:''}
     ${o.message?`<div style="font-size:.68rem;color:var(--vc-text-dim);font-style:italic;margin-top:.2rem">"${o.message}"</div>`:''}
-    ${exchangeInfo}
+    ${exchangeHTML}
     <div style="font-size:.6rem;color:var(--vc-text-dim);margin-top:.3rem;text-align:right">Cliquer pour voir les détails →</div>
   </div>`;
 }
 
-// View detailed offer before accepting/rejecting
+// View detailed offer
 async function viewOfferDetail(offerId, dir){
   const o=(_tradeMyOffers.received||[]).find(x=>x._id===offerId)||(_tradeMyOffers.sent||[]).find(x=>x._id===offerId);
   if(!o)return;
   
-  const cards=o.offeredCards||[];
+  const offeredCards=o.offeredCards||[];
   const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
   const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
-  const totalVal=cards.reduce((s,c)=>s+(c.value||0),0);
   const statusColors={pending:'var(--vc-gold)',accepted:'var(--vc-green)',rejected:'#ef4444',cancelled:'var(--vc-text-dim)'};
   const statusLabels={pending:'⏳ En attente',accepted:'✅ Acceptée',rejected:'❌ Refusée',cancelled:'🚫 Annulée'};
   
-  // Fetch listing data for exchange info
-  let listingCards=[];
-  let listingUsername='';
-  try{
-    const listing=[..._tradeListings,..._tradeMyListings].find(l=>l._id===o.listingId);
-    if(listing){
-      listingCards=listing.cards||[];
-      listingUsername=listing.username||'';
-    }else{
-      const res=await API('/trades/listing/'+o.listingId);
-      if(res.listing){listingCards=res.listing.cards||[];listingUsername=res.listing.username||''}
-    }
-  }catch(e){}
+  // Fetch listing if not in cache
+  let listing=_tradeListingCache[o.listingId];
+  if(!listing){
+    try{const res=await API('/trades/listing/'+o.listingId);if(res.listing){listing=res.listing;_tradeListingCache[o.listingId]=listing}}catch(e){}
+  }
+  const listingCards=listing?.cards||[];
   
-  const makeCardGrid=(cardList,label)=>{
-    if(!cardList.length)return '';
-    return `<div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">${label}</div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:.8rem">
-      ${cardList.map(c=>{
-        const col=rCol[c.rarity]||'#94a3b8';
-        return `<div style="text-align:center">
-          <div style="width:70px;height:98px;border-radius:6px;overflow:hidden;border:2px solid ${col}55;box-shadow:0 4px 12px ${col}22;margin:0 auto .2rem">
-            ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:1.3rem">🎴</div>`}
-          </div>
-          <div style="font-size:.6rem;font-weight:600;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
-          <div style="font-size:.5rem;color:${col}">${rl[c.rarity]||''}</div>
-          <div style="font-size:.55rem;color:var(--vc-gold);font-family:'JetBrains Mono'">${(c.value||0).toFixed(2)}€</div>
-        </div>`;
-      }).join('')}
+  // Perspective
+  const iGave=dir==='received'?listingCards:offeredCards;
+  const iGot=dir==='received'?offeredCards:listingCards;
+  const otherUser=dir==='received'?o.fromUsername:o.toUsername;
+  const gaveVal=iGave.reduce((s,c)=>s+(c.value||0),0);
+  const gotVal=iGot.reduce((s,c)=>s+(c.value||0),0);
+  
+  const makeCardGrid=(cardList)=>cardList.map(c=>{
+    const col=rCol[c.rarity]||'#94a3b8';
+    return `<div style="text-align:center">
+      <div style="width:65px;height:91px;border-radius:6px;overflow:hidden;border:2px solid ${col}55;box-shadow:0 3px 10px ${col}22;margin:0 auto .2rem">
+        ${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--vc-bg-surface);font-size:1.2rem">🎴</div>`}
+      </div>
+      <div style="font-size:.58rem;font-weight:600;max-width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+      <div style="font-size:.48rem;color:${col}">${rl[c.rarity]||''}</div>
+      <div style="font-size:.52rem;color:var(--vc-gold);font-family:'JetBrains Mono'">${(c.value||0).toFixed(2)}€</div>
     </div>`;
-  };
+  }).join('');
   
-  // Exchange summary for accepted offers
-  let exchangeHTML='';
-  if(o.status==='accepted'&&listingCards.length){
-    const listingTotal=listingCards.reduce((s,c)=>s+(c.value||0),0);
-    exchangeHTML=`
-      <div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15);border-radius:8px;padding:.6rem;margin-bottom:.6rem">
-        <div style="font-size:.7rem;font-weight:700;color:var(--vc-green);margin-bottom:.4rem">🔄 Résumé de l'échange</div>
-        <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.3rem">
-          <div style="flex:1;text-align:center">
-            <div style="font-size:.6rem;color:var(--vc-text-dim);margin-bottom:.2rem">@${o.fromUsername} a donné</div>
-            <div style="display:flex;gap:2px;justify-content:center">${cards.slice(0,4).map(c=>`<div style="width:28px;height:39px;border-radius:3px;overflow:hidden;border:1px solid ${(rCol[c.rarity]||'#94a3b8')}44">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`).join('')}</div>
-            <div style="font-size:.58rem;color:var(--vc-gold);font-family:'JetBrains Mono';margin-top:.15rem">${totalVal.toFixed(2)}€</div>
+  // Full exchange view for accepted offers (perspective-based)
+  let exchangeSection='';
+  if(o.status==='accepted'&&iGave.length&&iGot.length){
+    exchangeSection=`
+      <div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15);border-radius:10px;padding:.7rem;margin-bottom:.7rem">
+        <div style="font-size:.72rem;font-weight:700;color:var(--vc-green);margin-bottom:.5rem;text-align:center">🔄 Résumé de l'échange</div>
+        <div style="display:flex;align-items:stretch;gap:.3rem">
+          <div style="flex:1;background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.1);border-radius:8px;padding:.5rem">
+            <div style="font-size:.62rem;font-weight:600;color:#ef4444;margin-bottom:.3rem;text-align:center">📤 Vous avez donné</div>
+            <div style="display:flex;gap:.3rem;flex-wrap:wrap;justify-content:center">${makeCardGrid(iGave)}</div>
+            <div style="text-align:center;font-size:.6rem;color:var(--vc-gold);font-family:'JetBrains Mono';font-weight:700;margin-top:.3rem">${gaveVal.toFixed(2)}€</div>
           </div>
-          <div style="font-size:1rem">⇄</div>
-          <div style="flex:1;text-align:center">
-            <div style="font-size:.6rem;color:var(--vc-text-dim);margin-bottom:.2rem">@${listingUsername||o.toUsername} a donné</div>
-            <div style="display:flex;gap:2px;justify-content:center">${listingCards.slice(0,4).map(c=>`<div style="width:28px;height:39px;border-radius:3px;overflow:hidden;border:1px solid ${(rCol[c.rarity]||'#94a3b8')}44">${c.img?`<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">`:'🎴'}</div>`).join('')}</div>
-            <div style="font-size:.58rem;color:var(--vc-gold);font-family:'JetBrains Mono';margin-top:.15rem">${listingTotal.toFixed(2)}€</div>
+          <div style="display:flex;align-items:center;font-size:1.2rem;color:var(--vc-text-dim)">⇄</div>
+          <div style="flex:1;background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.1);border-radius:8px;padding:.5rem">
+            <div style="font-size:.62rem;font-weight:600;color:var(--vc-green);margin-bottom:.3rem;text-align:center">📥 Vous avez reçu</div>
+            <div style="display:flex;gap:.3rem;flex-wrap:wrap;justify-content:center">${makeCardGrid(iGot)}</div>
+            <div style="text-align:center;font-size:.6rem;color:var(--vc-gold);font-family:'JetBrains Mono';font-weight:700;margin-top:.3rem">${gotVal.toFixed(2)}€</div>
           </div>
         </div>
+        ${o.moneyOffer?`<div style="text-align:center;margin-top:.3rem;font-size:.6rem;color:var(--vc-gold)">💵 Compensation: ${dir==='received'?'+':'-'}${o.moneyOffer.toFixed(2)}€</div>`:''}
       </div>`;
+  }
+  
+  // For pending/rejected: show cards normally
+  let pendingSection='';
+  if(o.status!=='accepted'){
+    pendingSection=`
+      <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🃏 Cartes proposées par @${o.fromUsername}</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.7rem">${makeCardGrid(offeredCards)}</div>
+      ${listingCards.length?`
+        <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🎯 En échange de (annonce @${listing?.username||o.toUsername})</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.7rem">${makeCardGrid(listingCards)}</div>
+      `:''}`;
   }
   
   document.getElementById('tradeDetailContent').innerHTML=`
@@ -2858,32 +2899,31 @@ async function viewOfferDetail(offerId, dir){
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-family:'Exo 2';font-weight:800;font-size:.95rem">📋 Détail de l'offre</div>
-          <div style="font-size:.68rem;color:var(--vc-text-dim)">${dir==='received'?'De @'+o.fromUsername:'À @'+o.toUsername} • ${timeAgo(o.createdAt)}</div>
+          <div style="font-size:.68rem;color:var(--vc-text-dim)">Échange avec @${otherUser} • ${timeAgo(o.createdAt)}</div>
         </div>
         <span style="font-size:.7rem;color:${statusColors[o.status]};font-weight:700;background:${statusColors[o.status]}15;padding:.2rem .5rem;border-radius:6px">${statusLabels[o.status]}</span>
       </div>
     </div>
     <div style="padding:1rem 1.2rem">
-      ${makeCardGrid(cards,'🃏 Cartes proposées par @'+o.fromUsername)}
-      ${listingCards.length&&o.status==='accepted'?makeCardGrid(listingCards,'🃏 Cartes de @'+(listingUsername||o.toUsername)):''}
-      ${exchangeHTML}
+      ${exchangeSection}
+      ${pendingSection}
       
-      <div style="background:var(--vc-bg-surface);border-radius:8px;padding:.6rem;margin-bottom:.6rem;font-size:.72rem">
-        <div style="display:flex;justify-content:space-between;margin-bottom:.2rem">
+      <div style="background:var(--vc-bg-surface);border-radius:8px;padding:.5rem;margin-bottom:.5rem;font-size:.68rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.15rem">
           <span style="color:var(--vc-text-dim)">Valeur offerte</span>
-          <span style="font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalVal.toFixed(2)}€</span>
+          <span style="font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${(offeredCards.reduce((s,c)=>s+(c.value||0),0)).toFixed(2)}€</span>
         </div>
         ${o.moneyOffer?`<div style="display:flex;justify-content:space-between">
-          <span style="color:var(--vc-text-dim)">💵 Compensation €</span>
+          <span style="color:var(--vc-text-dim)">💵 Compensation</span>
           <span style="font-family:'JetBrains Mono';color:var(--vc-green);font-weight:700">+${o.moneyOffer.toFixed(2)}€</span>
         </div>`:''}
-        ${o.respondedAt?`<div style="display:flex;justify-content:space-between;margin-top:.2rem;padding-top:.2rem;border-top:1px solid var(--vc-border)">
-          <span style="color:var(--vc-text-dim)">📅 Répondu</span>
-          <span>${new Date(o.respondedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}</span>
+        ${o.respondedAt?`<div style="display:flex;justify-content:space-between;margin-top:.15rem;padding-top:.15rem;border-top:1px solid var(--vc-border)">
+          <span style="color:var(--vc-text-dim)">📅 ${o.status==='accepted'?'Échangé le':'Répondu le'}</span>
+          <span>${new Date(o.respondedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
         </div>`:''}
       </div>
       
-      ${o.message?`<div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:6px;padding:.5rem;margin-bottom:.6rem;font-size:.7rem;color:var(--vc-text-dim);font-style:italic">💬 "${o.message}"</div>`:''}
+      ${o.message?`<div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:6px;padding:.4rem;margin-bottom:.5rem;font-size:.68rem;color:var(--vc-text-dim);font-style:italic">💬 "${o.message}"</div>`:''}
       
       ${dir==='received'&&o.status==='pending'?`<div style="display:flex;gap:.4rem;margin-top:.5rem">
         <button onclick="event.stopPropagation();respondOffer('${o._id}','accept')" style="flex:1;padding:.6rem;border-radius:8px;border:0;background:var(--vc-green);color:#fff;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">✅ Accepter l'offre</button>
@@ -2892,6 +2932,7 @@ async function viewOfferDetail(offerId, dir){
     </div>`;
   document.getElementById('tradeDetailM').classList.add('on');
 }
+
 
 function timeAgo(date){
   const s=Math.floor((Date.now()-new Date(date))/1000);
