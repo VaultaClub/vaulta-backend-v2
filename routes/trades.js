@@ -190,11 +190,13 @@ router.post('/offers/:offerId/respond', auth, async (req, res) => {
     if (offer.toUserId.toString() !== req.user._id.toString()) return res.status(403).json({ error: 'Non autorisé' });
     if (offer.status !== 'pending') return res.status(400).json({ error: 'Offre déjà traitée' });
     
+    const listing = await TradeListing.findById(offer.listingId);
+    
     offer.status = action === 'accept' ? 'accepted' : 'rejected';
     offer.respondedAt = new Date();
     await offer.save();
     
-    if (action === 'accept') {
+    if (action === 'accept' && listing) {
       // Mark listing as completed
       await TradeListing.updateOne({ _id: offer.listingId }, { status: 'completed' });
       // Reject all other pending offers
@@ -202,16 +204,119 @@ router.post('/offers/:offerId/respond', auth, async (req, res) => {
         { listingId: offer.listingId, _id: { $ne: offer._id }, status: 'pending' },
         { status: 'rejected', respondedAt: new Date() }
       );
+      
+      // === REAL CARD SWAP ===
+      try {
+        const mongoose = require('mongoose');
+        const Setting = mongoose.model('Setting');
+        
+        const toUserId = offer.toUserId.toString();   // listing owner (acceptor)
+        const fromUserId = offer.fromUserId.toString(); // offer maker
+        
+        // Load both users' data
+        const [toData, fromData] = await Promise.all([
+          Setting.findOne({ key: 'vc_data_' + toUserId }),
+          Setting.findOne({ key: 'vc_data_' + fromUserId }),
+        ]);
+        
+        const toCollection = toData?.value?.coll || [];
+        const fromCollection = fromData?.value?.coll || [];
+        const toBalance = toData?.value?.bal || 0;
+        const fromBalance = fromData?.value?.bal || 0;
+        const toTxHistory = toData?.value?.txHistory || [];
+        const fromTxHistory = fromData?.value?.txHistory || [];
+        
+        const now = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        
+        // Cards from listing (toUser gives these to fromUser)
+        const listingCardIds = listing.cards.map(c => c.cardId);
+        const cardsToGive = toCollection.filter(c => listingCardIds.includes(String(c.id)));
+        const remainingToCollection = toCollection.filter(c => !listingCardIds.includes(String(c.id)));
+        
+        // Cards from offer (fromUser gives these to toUser)
+        const offerCardIds = offer.offeredCards.map(c => c.cardId);
+        const cardsToReceive = fromCollection.filter(c => offerCardIds.includes(String(c.id)));
+        const remainingFromCollection = fromCollection.filter(c => !offerCardIds.includes(String(c.id)));
+        
+        // Add trade provenance to cards
+        const tagCard = (card, from) => ({
+          ...card,
+          tradeHistory: [...(card.tradeHistory || []), { from, date: new Date().toISOString() }],
+          tradedFrom: from,
+          tradeDate: new Date().toISOString(),
+        });
+        
+        // Swap cards
+        const newToCollection = [
+          ...remainingToCollection,
+          ...cardsToReceive.map(c => tagCard(c, offer.fromUsername)),
+        ];
+        const newFromCollection = [
+          ...remainingFromCollection,
+          ...cardsToGive.map(c => tagCard(c, offer.toUsername)),
+        ];
+        
+        // Handle money compensation
+        let newToBal = toBalance;
+        let newFromBal = fromBalance;
+        if (offer.moneyOffer > 0) {
+          newToBal += offer.moneyOffer;
+          newFromBal -= offer.moneyOffer;
+        }
+        
+        // Add transaction history
+        const listingNames = listing.cards.map(c => c.name).join(', ');
+        const offerNames = offer.offeredCards.map(c => c.name).join(', ');
+        
+        toTxHistory.unshift({ type: 'trade', desc: `🔄 Échange: reçu ${offerNames} de @${offer.fromUsername}`, amt: offer.offeredTotalValue, date: now });
+        fromTxHistory.unshift({ type: 'trade', desc: `🔄 Échange: reçu ${listingNames} de @${offer.toUsername}`, amt: listing.totalValue, date: now });
+        
+        if (offer.moneyOffer > 0) {
+          toTxHistory.unshift({ type: 'dep', desc: `💰 Compensation échange de @${offer.fromUsername}`, amt: offer.moneyOffer, date: now });
+          fromTxHistory.unshift({ type: 'pur', desc: `💰 Compensation échange à @${offer.toUsername}`, amt: -offer.moneyOffer, date: now });
+        }
+        
+        // Save both users' data
+        await Promise.all([
+          Setting.findOneAndUpdate(
+            { key: 'vc_data_' + toUserId },
+            { value: { ...toData?.value, coll: newToCollection, bal: newToBal, txHistory: toTxHistory } },
+            { upsert: true }
+          ),
+          Setting.findOneAndUpdate(
+            { key: 'vc_data_' + fromUserId },
+            { value: { ...fromData?.value, coll: newFromCollection, bal: newFromBal, txHistory: fromTxHistory } },
+            { upsert: true }
+          ),
+        ]);
+        
+        console.log(`✅ Trade swap complete: ${offer.toUsername} ↔ ${offer.fromUsername} (${listing.cards.length} ↔ ${offer.offeredCards.length} cards)`);
+      } catch (swapErr) {
+        console.error('❌ Card swap error:', swapErr.message);
+        // Trade is still marked as accepted, but cards weren't swapped
+        // This is logged but doesn't block the response
+      }
     }
     
-    // Notify via socket
+    // Notify via socket with full data for live updates
     const io = req.app.get('io');
     if (io) {
-      io.emit('trade:offerResponse', { offerId: offer._id.toString(), action, fromUserId: offer.fromUserId.toString(), toUserId: offer.toUserId.toString() });
+      io.emit('trade:offerResponse', {
+        offerId: offer._id.toString(),
+        listingId: offer.listingId.toString(),
+        action,
+        fromUserId: offer.fromUserId.toString(),
+        toUserId: offer.toUserId.toString(),
+        fromUsername: offer.fromUsername,
+        toUsername: offer.toUsername,
+      });
+      // Tell both users to reload their data
+      io.emit('trade:dataChanged', { userIds: [offer.fromUserId.toString(), offer.toUserId.toString()] });
     }
     
     res.json({ offer });
   } catch (err) {
+    console.error('Respond offer error:', err.message);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

@@ -3052,15 +3052,39 @@ async function respondOffer(offerId, action){
     await API('/trades/offers/'+offerId+'/respond',{method:'POST',body:JSON.stringify({action})});
     
     if(action==='accept'&&offer&&offer.offeredCards&&offer.offeredCards.length){
-      // Show card reveal animation
+      // Show card reveal animation — DON'T close modal or reload yet
       showTradeAcceptReveal(offer);
+      // Reload data in background (cards have been swapped server-side)
+      setTimeout(async()=>{
+        await reloadUserData();
+        await loadTrades();
+      },500);
     }else{
       toast(action==='accept'?'✅ Offre acceptée !':'❌ Offre refusée','ok');
+      await loadTrades();renderTrades();
+      cMod('tradeDetailM');
     }
-    
-    await loadTrades();renderTrades();
-    cMod('tradeDetailM');
   }catch(err){toast(err.message||'Erreur','err')}
+}
+
+// Reload user data from server (after trade swap)
+async function reloadUserData(){
+  try{
+    const r=await fetch('/api/settings');if(!r.ok)return;
+    const d=await r.json();
+    Object.entries(d).forEach(([k,v])=>{_cc[k]=v});
+    if(currentUser){
+      const key='vc_data_'+currentUser.id;
+      const data=_cc[key];
+      if(data){
+        if(data.bal!==undefined){bal=data.bal;updBal()}
+        if(data.coll)coll=data.coll;
+        if(data.txHistory)txHistory=data.txHistory;
+        if(data.negoHistory)negoHistory=data.negoHistory;
+      }
+    }
+    renderColl();renderTx();
+  }catch(e){console.error('Reload data:',e)}
 }
 
 function showTradeAcceptReveal(offer){
@@ -3142,17 +3166,22 @@ function showTradeAcceptReveal(offer){
 
 function tradeAcceptAction(action, cards){
   if(action==='receive'){
-    // Add cards to ship cart
+    // Cards are already in collection (server swapped them), add to ship cart
+    let added=0;
     cards.forEach(c=>{
-      const existing=coll.find(x=>x.name===c.name&&x.img===c.img);
-      if(existing&&!shipCart.some(x=>String(x)===String(existing.id))){
+      // Find the card in our collection by name+img match (since IDs may differ after swap)
+      const existing=coll.find(x=>(x.name===c.name&&x.img===c.img)&&!shipCart.includes(x.id)&&!shipCart.includes(String(x.id)));
+      if(existing){
         shipCart.push(existing.id);
+        added++;
       }
     });
     renderShipBadge();
-    toast('📦 Cartes ajoutées au panier d\'envoi !','ok');
-    cMod('tradeDetailM');
+    toast(`📦 ${added} carte(s) ajoutée(s) au panier d'envoi !`,'ok');
   }
+  cMod('tradeDetailM');
+  // Now safe to reload trades view
+  loadTrades().then(()=>renderTrades());
 }
 
 // ========== SYNC USER TO ADMIN (shared vc_users) ==========
@@ -3309,11 +3338,28 @@ if(_socket){
     if(currentUser&&data.toUserId===currentUser.id){
       checkTradeNotifs();
       toast(`🔄 Nouvelle offre d'échange de @${data.fromUsername}`,'ok');
+      // Auto-reload trades if on trade page
+      if(document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
+        loadTrades().then(()=>renderTrades());
+      }
     }
   });
   _socket.on('trade:offerResponse',(data)=>{
     if(currentUser&&(data.fromUserId===currentUser.id||data.toUserId===currentUser.id)){
       checkTradeNotifs();
+      if(data.fromUserId===currentUser.id){
+        toast(data.action==='accept'?`✅ @${data.toUsername} a accepté votre offre !`:`❌ @${data.toUsername} a refusé votre offre`,'ok');
+      }
+      if(document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
+        loadTrades().then(()=>renderTrades());
+      }
+    }
+  });
+  _socket.on('trade:dataChanged',(data)=>{
+    if(currentUser&&data.userIds&&data.userIds.includes(currentUser.id)){
+      // Server swapped cards — reload our data
+      console.log('🔄 Trade data changed, reloading...');
+      reloadUserData();
     }
   });
 }
