@@ -386,6 +386,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 @keyframes mktPulse{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
 @keyframes mktCardIn{0%{transform:scale(.5) rotateY(180deg);opacity:0}60%{transform:scale(1.05) rotateY(0);opacity:1}100%{transform:scale(1) rotateY(0)}}
 @keyframes tradePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{transform:scale(1.1);box-shadow:0 0 8px 3px rgba(239,68,68,.3)}}
+@keyframes tradeBannerIn{0%{transform:translateX(-50%) translateY(-20px);opacity:0}100%{transform:translateX(-50%) translateY(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -3422,12 +3423,10 @@ if(_socket){
     checkTradeNotifs();
     
     if(isFrom&&data.action==='accept'){
-      // I'm the offer sender and my offer was accepted — show card reveal with listing cards I received
-      toast(`✅ @${data.toUsername} a accepté votre offre !`,'ok');
-      // Fetch listing cards for reveal
-      showOfferAcceptedReveal(data);
+      // I'm the offer sender — my offer was accepted, I receive listing cards
+      showTradeBanner(`✅ @${data.toUsername} a accepté votre offre d'échange !`, data.listingCards||[], data.toUsername);
     }else if(isFrom&&data.action==='reject'){
-      toast(`❌ @${data.toUsername} a refusé votre offre`,'ok');
+      toast(`❌ @${data.toUsername} a refusé votre offre`,'err');
     }
     
     if(!_tradeRevealActive){
@@ -3442,65 +3441,96 @@ if(_socket){
   });
 }
 
-// Show card reveal for the offer sender when their offer is accepted
-async function showOfferAcceptedReveal(data){
-  try{
-    // We need the listing data to show what cards we received
-    const listingsRes=await API('/trades?status=completed');
-    const listing=(listingsRes.listings||[]).find(l=>l._id===data.listingId);
-    if(!listing||!listing.cards||!listing.cards.length)return;
-    
-    _tradeRevealActive=true;
-    const cards=listing.cards;
-    const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
-    const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
-    const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-    
-    const cardsHTML=cards.map((c,i)=>{
-      const col=rCol[c.rarity]||'#94a3b8';
-      return `<div style="text-align:center;animation:mktCardIn .6s ease-out ${i*0.15}s both">
-        <div style="display:inline-block;position:relative;margin-bottom:.5rem">
-          ${c.img?`<img src="${c.img}" style="width:120px;border-radius:10px;box-shadow:0 8px 32px ${col}44,0 0 40px ${col}22;border:2px solid ${col}66">`
-          :`<div style="width:120px;height:168px;background:var(--vc-bg-surface);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 8px 32px ${col}44;border:2px solid ${col}66">🎴</div>`}
-        </div>
-        <div style="font-family:'Exo 2';font-weight:800;font-size:.82rem">${c.name}</div>
-        <div style="font-size:.6rem;font-weight:600;color:${col};text-transform:uppercase">${rl[c.rarity]||c.rarity}</div>
-        <div style="font-family:'JetBrains Mono';font-size:.7rem;color:var(--vc-gold);margin-top:.1rem">${(c.value||0).toFixed(2)}€</div>
-      </div>`;
-    }).join('');
-    
-    const totalValue=cards.reduce((s,c)=>s+(c.value||0),0);
-    
-    document.getElementById('tradeDetailContent').innerHTML=`
-      <div style="background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(99,102,241,.15));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
-        <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🎉</div>
-        <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Offre acceptée !</div>
-        <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">@${data.toUsername} a accepté votre échange — vous recevez ${cards.length} carte${cards.length>1?'s':''}</div>
+// Persistent trade notification banner
+let _tradeBannerData=null;
+
+function showTradeBanner(msg, cards, fromUser){
+  _tradeBannerData={cards,fromUser};
+  // Remove existing banner if any
+  const old=document.getElementById('tradeBanner');
+  if(old)old.remove();
+  
+  const banner=document.createElement('div');
+  banner.id='tradeBanner';
+  banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;background:linear-gradient(135deg,rgba(52,211,153,.95),rgba(99,102,241,.95));color:#fff;padding:.7rem 1rem;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:flex;align-items:center;gap:.8rem;max-width:500px;width:90%;animation:tradeBannerIn .4s ease-out;backdrop-filter:blur(8px)';
+  
+  const cardPreviews=cards.slice(0,3).map(c=>c.img?`<img src="${c.img}" style="width:32px;height:44px;border-radius:4px;border:1px solid rgba(255,255,255,.3);object-fit:cover">`:'').join('');
+  
+  banner.innerHTML=`
+    <div style="flex-shrink:0;display:flex;gap:2px">${cardPreviews}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-family:'Exo 2';font-weight:700;font-size:.78rem">${msg}</div>
+      <div style="font-size:.62rem;opacity:.8">${cards.length} carte${cards.length>1?'s':''} reçue${cards.length>1?'s':''}</div>
+    </div>
+    <button onclick="openTradeBannerReveal()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:.35rem .7rem;border-radius:6px;font-family:'Chakra Petch';font-weight:700;font-size:.7rem;cursor:pointer;white-space:nowrap">👁️ Voir</button>
+    <button onclick="closeTradeBanner()" style="background:0;border:0;color:rgba(255,255,255,.6);font-size:1.1rem;cursor:pointer;padding:0 .2rem;line-height:1">×</button>`;
+  document.body.appendChild(banner);
+  
+  // Auto-remove after 30s if not interacted
+  setTimeout(()=>{const b=document.getElementById('tradeBanner');if(b)b.style.opacity='.5'},25000);
+  setTimeout(()=>{const b=document.getElementById('tradeBanner');if(b&&!_tradeRevealActive)b.remove()},60000);
+}
+
+function closeTradeBanner(){
+  const b=document.getElementById('tradeBanner');if(b)b.remove();
+  _tradeBannerData=null;
+}
+
+function openTradeBannerReveal(){
+  if(!_tradeBannerData)return;
+  const {cards,fromUser}=_tradeBannerData;
+  closeTradeBanner();
+  
+  _tradeRevealActive=true;
+  const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
+  const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+  const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  
+  const cardsHTML=cards.map((c,i)=>{
+    const col=rCol[c.rarity]||'#94a3b8';
+    return `<div style="text-align:center;animation:mktCardIn .6s ease-out ${i*0.15}s both">
+      <div style="display:inline-block;margin-bottom:.4rem">
+        ${c.img?`<img src="${c.img}" style="width:120px;border-radius:10px;box-shadow:0 8px 32px ${col}44,0 0 40px ${col}22;border:2px solid ${col}66">`
+        :`<div style="width:120px;height:168px;background:var(--vc-bg-surface);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 8px 32px ${col}44;border:2px solid ${col}66">🎴</div>`}
       </div>
-      <div style="padding:1.2rem 1.5rem">
-        <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem">${cardsHTML}</div>
-        <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.7rem;margin-bottom:.8rem;font-size:.72rem">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
-            <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
-            <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${data.toUsername}</div>
-            <div>📅 Date</div><div style="text-align:right">${now}</div>
-          </div>
+      <div style="font-family:'Exo 2';font-weight:800;font-size:.82rem">${c.name}</div>
+      <div style="font-size:.6rem;font-weight:600;color:${col};text-transform:uppercase">${rl[c.rarity]||c.rarity}</div>
+      ${c.cardNum?`<div style="font-size:.55rem;color:var(--vc-text-dim);font-family:'JetBrains Mono'">N°${c.cardNum}</div>`:''}
+      <div style="font-family:'JetBrains Mono';font-size:.7rem;color:var(--vc-gold);margin-top:.1rem">${(c.value||0).toFixed(2)}€</div>
+    </div>`;
+  }).join('');
+  
+  const totalValue=cards.reduce((s,c)=>s+(c.value||0),0);
+  
+  document.getElementById('tradeDetailContent').innerHTML=`
+    <div style="background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(99,102,241,.15));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
+      <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🎉</div>
+      <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Offre acceptée !</div>
+      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">@${fromUser} a accepté votre échange</div>
+    </div>
+    <div style="padding:1.2rem 1.5rem">
+      <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem">${cardsHTML}</div>
+      <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.7rem;margin-bottom:.8rem;font-size:.72rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
+          <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
+          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${fromUser}</div>
+          <div>📅 Date</div><div style="text-align:right">${now}</div>
         </div>
-        <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
-          <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
-          <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
-            <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${data.toUsername}</span>
-            <span>→</span>
-            <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
-          </div>
+      </div>
+      <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
+        <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
+        <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
+          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${fromUser}</span>
+          <span>→</span>
+          <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:.4rem">
-          <button onclick="tradeAcceptAction('receive',${JSON.stringify(cards).replace(/"/g,'&quot;')})" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.08);color:var(--vc-gold);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">📦 Recevoir les cartes</button>
-          <button onclick="tradeAcceptAction('store',[])" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.08);color:var(--vc-primary-light);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">🗄️ Stocker dans la collection / Fermer</button>
-        </div>
-      </div>`;
-    document.getElementById('tradeDetailM').classList.add('on');
-  }catch(e){console.error('showOfferAcceptedReveal:',e)}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        <button onclick="tradeAcceptAction('receive',${JSON.stringify(cards).replace(/"/g,'&quot;')})" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.08);color:var(--vc-gold);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">📦 Recevoir les cartes</button>
+        <button onclick="tradeAcceptAction('store',[])" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.08);color:var(--vc-primary-light);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">🗄️ Stocker dans la collection / Fermer</button>
+      </div>
+    </div>`;
+  document.getElementById('tradeDetailM').classList.add('on');
 }
 
 // Periodic trade notification check (every 30s)

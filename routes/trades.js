@@ -309,6 +309,9 @@ router.post('/offers/:offerId/respond', auth, async (req, res) => {
         toUserId: offer.toUserId.toString(),
         fromUsername: offer.fromUsername,
         toUsername: offer.toUsername,
+        // Include cards data so frontend can show reveal without re-fetching
+        listingCards: listing ? listing.cards : [],
+        offeredCards: offer.offeredCards || [],
       });
       // Tell both users to reload their data
       io.emit('trade:dataChanged', { userIds: [offer.fromUserId.toString(), offer.toUserId.toString()] });
