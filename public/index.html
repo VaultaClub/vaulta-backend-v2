@@ -3046,12 +3046,113 @@ async function submitTradeOffer(){
 
 async function respondOffer(offerId, action){
   try{
+    // Find the offer data before responding
+    const offer=(_tradeMyOffers.received||[]).find(o=>o._id===offerId)||(_tradeMyOffers.sent||[]).find(o=>o._id===offerId);
+    
     await API('/trades/offers/'+offerId+'/respond',{method:'POST',body:JSON.stringify({action})});
-    toast(action==='accept'?'✅ Offre acceptée !':'❌ Offre refusée','ok');
+    
+    if(action==='accept'&&offer&&offer.offeredCards&&offer.offeredCards.length){
+      // Show card reveal animation
+      showTradeAcceptReveal(offer);
+    }else{
+      toast(action==='accept'?'✅ Offre acceptée !':'❌ Offre refusée','ok');
+    }
+    
     await loadTrades();renderTrades();
-    // Close detail modal if open
     cMod('tradeDetailM');
   }catch(err){toast(err.message||'Erreur','err')}
+}
+
+function showTradeAcceptReveal(offer){
+  const cards=offer.offeredCards||[];
+  const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
+  const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+  const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  
+  const cardsHTML=cards.map((c,i)=>{
+    const col=rCol[c.rarity]||'#94a3b8';
+    return `<div style="text-align:center;animation:mktCardIn .6s ease-out ${i*0.15}s both">
+      <div style="display:inline-block;position:relative;margin-bottom:.5rem">
+        ${c.img?`<img src="${c.img}" style="width:140px;border-radius:10px;box-shadow:0 8px 32px ${col}44,0 0 40px ${col}22;border:2px solid ${col}66">`
+        :`<div style="width:140px;height:196px;background:var(--vc-bg-surface);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:3rem;box-shadow:0 8px 32px ${col}44;border:2px solid ${col}66">🎴</div>`}
+      </div>
+      <div style="font-family:'Exo 2';font-weight:800;font-size:.9rem">${c.name}</div>
+      <div style="font-size:.65rem;font-weight:600;color:${col};text-transform:uppercase;letter-spacing:.5px">${rl[c.rarity]||c.rarity}</div>
+      ${c.cardNum?`<div style="font-size:.6rem;color:var(--vc-text-dim);font-family:'JetBrains Mono'">N°${c.cardNum}${c.setOfficial?'/'+c.setOfficial:''}</div>`:''}
+      <div style="font-family:'JetBrains Mono';font-size:.75rem;color:var(--vc-gold);margin-top:.15rem">${(c.value||0).toFixed(2)}€</div>
+    </div>`;
+  }).join('');
+  
+  const totalValue=cards.reduce((s,c)=>s+(c.value||0),0);
+  
+  document.getElementById('tradeDetailContent').innerHTML=`
+    <!-- Success header -->
+    <div style="background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(99,102,241,.12));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
+      <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🤝</div>
+      <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Échange accepté !</div>
+      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">Vous avez reçu ${cards.length} carte${cards.length>1?'s':''} de @${offer.fromUsername}</div>
+    </div>
+    
+    <div style="padding:1.2rem 1.5rem">
+      <!-- Cards grid -->
+      <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem">
+        ${cardsHTML}
+      </div>
+      
+      <!-- Trade info -->
+      <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.7rem;margin-bottom:.8rem;font-size:.72rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
+          <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
+          ${offer.moneyOffer?`<div>💵 Compensation</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-green)">+${offer.moneyOffer.toFixed(2)}€</div>`:''}
+          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${offer.fromUsername}</div>
+          <div>📅 Date</div><div style="text-align:right">${now}</div>
+        </div>
+      </div>
+      
+      <!-- Ownership history -->
+      <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
+        <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
+        <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
+          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${offer.fromUsername}</span>
+          <span>→</span>
+          <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
+          <span style="margin-left:auto;font-family:'JetBrains Mono'">${now}</span>
+        </div>
+      </div>
+      
+      ${offer.message?`<div style="font-size:.68rem;color:var(--vc-text-dim);font-style:italic;margin-bottom:.6rem;padding:.4rem;background:var(--vc-bg-surface);border-radius:6px">💬 "${offer.message}"</div>`:''}
+      
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        <button onclick="tradeAcceptAction('receive',${JSON.stringify(cards).replace(/"/g,'&quot;')})" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.08);color:var(--vc-gold);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem">
+          📦 Recevoir les cartes
+        </button>
+        <button onclick="cMod('tradeDetailM')" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.08);color:var(--vc-primary-light);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem">
+          🗄️ Stocker dans la collection / Fermer
+        </button>
+      </div>
+      
+      <div style="text-align:center;margin-top:.8rem;font-size:.65rem;color:var(--vc-text-dim)">
+        🙏 Merci ! Les cartes ont été ajoutées à votre collection.
+      </div>
+    </div>`;
+  
+  document.getElementById('tradeDetailM').classList.add('on');
+}
+
+function tradeAcceptAction(action, cards){
+  if(action==='receive'){
+    // Add cards to ship cart
+    cards.forEach(c=>{
+      const existing=coll.find(x=>x.name===c.name&&x.img===c.img);
+      if(existing&&!shipCart.some(x=>String(x)===String(existing.id))){
+        shipCart.push(existing.id);
+      }
+    });
+    renderShipBadge();
+    toast('📦 Cartes ajoutées au panier d\'envoi !','ok');
+    cMod('tradeDetailM');
+  }
 }
 
 // ========== SYNC USER TO ADMIN (shared vc_users) ==========
