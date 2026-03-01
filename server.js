@@ -141,13 +141,16 @@ const PORT = process.env.PORT || 3000;
 const start = async () => {
   await connectDB();
   
-  // Verify SMTP connection
+  // Verify SMTP connection (non-blocking)
   try {
     const { verifyConnection } = require('./services/emailService');
-    const smtpOk = await verifyConnection();
-    console.log(smtpOk ? '✅ SMTP connecté' : '❌ SMTP indisponible (fallback actif)');
+    verifyConnection().then(ok => {
+      console.log(ok ? '✅ SMTP connecté' : '❌ SMTP indisponible (fallback actif)');
+    }).catch(e => {
+      console.log('❌ SMTP erreur:', e.message, '(fallback actif)');
+    });
   } catch (e) {
-    console.log('❌ SMTP erreur:', e.message, '(fallback actif)');
+    console.log('❌ SMTP non configuré (fallback actif)');
   }
   
   // Daily price sync cron (runs at 6:00 AM every day)
