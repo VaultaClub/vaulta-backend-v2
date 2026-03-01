@@ -415,8 +415,9 @@ router.post('/logout', (req, res) => { res.clearCookie('token'); res.json({ mess
 router.get('/me', auth, async (req, res) => {
   // Generate referral code for existing users who don't have one
   if (!req.user.referralCode) {
-    req.user.referralCode = req.user.username.toUpperCase().slice(0, 4) + require('crypto').randomBytes(3).toString('hex').toUpperCase();
-    await req.user.save();
+    const code = req.user.username.toUpperCase().slice(0, 4) + require('crypto').randomBytes(3).toString('hex').toUpperCase();
+    await User.updateOne({ _id: req.user._id }, { referralCode: code });
+    req.user.referralCode = code;
   }
   res.json(User.safeUser(req.user));
 });
