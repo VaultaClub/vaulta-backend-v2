@@ -30,10 +30,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/trades/mine — My listings
+// GET /api/trades/mine — My listings (active + completed for history)
 router.get('/mine', auth, async (req, res) => {
   try {
-    const listings = await TradeListing.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const listings = await TradeListing.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50);
     res.json({ listings });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -48,6 +48,17 @@ router.get('/offers/mine', auth, async (req, res) => {
       TradeOffer.find({ fromUserId: req.user._id }).sort({ createdAt: -1 }).limit(50),
     ]);
     res.json({ received, sent });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/trades/listing/:id — Get a specific listing (for offer detail view)
+router.get('/listing/:id', async (req, res) => {
+  try {
+    const listing = await TradeListing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'Annonce introuvable' });
+    res.json({ listing });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
