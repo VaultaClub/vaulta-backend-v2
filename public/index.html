@@ -385,13 +385,14 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 .cdm-close:hover{background:var(--vc-bg-hover);color:var(--vc-text)}
 @keyframes mktPulse{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
 @keyframes mktCardIn{0%{transform:scale(.5) rotateY(180deg);opacity:0}60%{transform:scale(1.05) rotateY(0);opacity:1}100%{transform:scale(1) rotateY(0)}}
+@keyframes tradePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{transform:scale(1.1);box-shadow:0 0 8px 3px rgba(239,68,68,.3)}}
 </style>
 </head>
 <body>
 <div class="atmo"></div>
 <header class="hdr">
   <div class="logo" onclick="go('shop')"><div class="logo-i">V</div><div><div class="logo-t">VAULTA</div><div class="logo-s">CLUB</div></div></div>
-  <nav class="nav"><button class="nb on" data-p="shop" onclick="go('shop')">Boutique</button><button class="nb" data-p="coll" onclick="go('coll')">Collection</button><button class="nb" data-p="mkt" onclick="go('mkt')">Marché</button><button class="nb" data-p="trade" onclick="go('trade')">Échange</button><button class="nb" data-p="wal" onclick="go('wal')">Portefeuille</button><button class="nb" data-p="sup" onclick="go('sup')">Support</button></nav>
+  <nav class="nav"><button class="nb on" data-p="shop" onclick="go('shop')">Boutique</button><button class="nb" data-p="coll" onclick="go('coll')">Collection</button><button class="nb" data-p="mkt" onclick="go('mkt')">Marché</button><button class="nb" data-p="trade" onclick="go('trade')" style="position:relative">Échange<span id="tradeNotifD" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#ef4444;color:#fff;border-radius:50%;font-size:.55rem;font-weight:700;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono';animation:tradePulse 2s infinite"></span></button><button class="nb" data-p="wal" onclick="go('wal')">Portefeuille</button><button class="nb" data-p="sup" onclick="go('sup')">Support</button></nav>
   <div class="hdr-r">
     <div class="wpill" onclick="go('wal')" id="hBalPill" style="display:none">💎 <span id="hBal">0.00€</span></div>
     <div class="av" id="avBtn" onclick="toggleUserMenu()" style="position:relative">
@@ -666,7 +667,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
   </div>
 </div>
 </main>
-<nav class="mnav"><button class="mb on" data-p="shop" onclick="go('shop')"><span class="ico">🛒</span>Boutique</button><button class="mb" data-p="coll" onclick="go('coll')"><span class="ico">📁</span>Collection</button><button class="mb" data-p="mkt" onclick="go('mkt')"><span class="ico">💱</span>Marché</button><button class="mb" data-p="trade" onclick="go('trade')"><span class="ico">🔄</span>Échange</button><button class="mb" data-p="wal" onclick="go('wal')"><span class="ico">💰</span>Wallet</button><button class="mb" data-p="sup" onclick="go('sup')"><span class="ico">📩</span>Support</button></nav>
+<nav class="mnav"><button class="mb on" data-p="shop" onclick="go('shop')"><span class="ico">🛒</span>Boutique</button><button class="mb" data-p="coll" onclick="go('coll')"><span class="ico">📁</span>Collection</button><button class="mb" data-p="mkt" onclick="go('mkt')"><span class="ico">💱</span>Marché</button><button class="mb" data-p="trade" onclick="go('trade')" style="position:relative"><span class="ico">🔄</span>Échange<span id="tradeNotifM" style="display:none;position:absolute;top:2px;right:8px;min-width:14px;height:14px;background:#ef4444;color:#fff;border-radius:50%;font-size:.5rem;font-weight:700;align-items:center;justify-content:center;font-family:'JetBrains Mono';animation:tradePulse 2s infinite"></span></button><button class="mb" data-p="wal" onclick="go('wal')"><span class="ico">💰</span>Wallet</button><button class="mb" data-p="sup" onclick="go('sup')"><span class="ico">📩</span>Support</button></nav>
 <!-- Overlay -->
 <div class="ov" id="overlay">
   <div id="boosterBadge" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);padding:.3rem .9rem;border-radius:50px;font-family:'JetBrains Mono';font-size:.75rem;color:var(--vc-primary-light);display:none"></div>
@@ -2591,6 +2592,7 @@ function onLoginSuccess(){
   }
   loadLocal();
   updateAuthUI();renderColl();renderTx();
+  checkTradeNotifs();
 }
 async function checkAuth(){
   if(!authToken)return;
@@ -2607,6 +2609,28 @@ let _tradeListings=[];
 let _tradeMyListings=[];
 let _tradeMyOffers={received:[],sent:[]};
 let _tradeSelectedCards=[];
+let _tradePendingOffers=0;
+
+function updateTradeNotif(count){
+  _tradePendingOffers=count;
+  const dBadge=document.getElementById('tradeNotifD');
+  const mBadge=document.getElementById('tradeNotifM');
+  if(count>0){
+    [dBadge,mBadge].forEach(b=>{if(b){b.style.display='flex';b.textContent=count>9?'9+':count}});
+  }else{
+    [dBadge,mBadge].forEach(b=>{if(b)b.style.display='none'});
+  }
+}
+
+// Check for pending offers periodically
+async function checkTradeNotifs(){
+  if(!currentUser)return;
+  try{
+    const data=await API('/trades/offers/mine');
+    const pending=(data.received||[]).filter(o=>o.status==='pending').length;
+    updateTradeNotif(pending);
+  }catch(e){}
+}
 
 function tradeTab(tab){
   _tradeTab=tab;
@@ -2643,6 +2667,9 @@ async function loadTrades(){
     _tradeListings=(results[0].status==='fulfilled'?results[0].value.listings:[])||[];
     _tradeMyListings=(results[1].status==='fulfilled'?results[1].value.listings:[])||[];
     _tradeMyOffers=(results[2].status==='fulfilled'?results[2].value:{received:[],sent:[]})||{received:[],sent:[]};
+    // Update notification badge
+    const pending=(_tradeMyOffers.received||[]).filter(o=>o.status==='pending').length;
+    updateTradeNotif(pending);
   }catch(e){console.error('Load trades:',e.message)}
 }
 
@@ -3176,6 +3203,18 @@ if(_socket){
   _socket.on('product:created',()=>loadProductsFromAPI());
   _socket.on('product:updated',()=>loadProductsFromAPI());
   _socket.on('product:deleted',()=>loadProductsFromAPI());
+  // Trade notifications
+  _socket.on('trade:newOffer',(data)=>{
+    if(currentUser&&data.toUserId===currentUser.id){
+      checkTradeNotifs();
+      toast(`🔄 Nouvelle offre d'échange de @${data.fromUsername}`,'ok');
+    }
+  });
+  _socket.on('trade:offerResponse',(data)=>{
+    if(currentUser&&(data.fromUserId===currentUser.id||data.toUserId===currentUser.id)){
+      checkTradeNotifs();
+    }
+  });
 }
 
 window.addEventListener('storage',function(e){
