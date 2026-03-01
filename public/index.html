@@ -2826,8 +2826,8 @@ function viewOfferDetail(offerId, dir){
       
       <!-- Actions -->
       ${dir==='received'&&o.status==='pending'?`<div style="display:flex;gap:.4rem;margin-top:.5rem">
-        <button onclick="event.stopPropagation();cMod('tradeDetailM');respondOffer('${o._id}','accept')" style="flex:1;padding:.6rem;border-radius:8px;border:0;background:var(--vc-green);color:#fff;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">✅ Accepter l'offre</button>
-        <button onclick="event.stopPropagation();cMod('tradeDetailM');respondOffer('${o._id}','reject')" style="flex:1;padding:.6rem;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">❌ Refuser</button>
+        <button onclick="event.stopPropagation();respondOffer('${o._id}','accept')" style="flex:1;padding:.6rem;border-radius:8px;border:0;background:var(--vc-green);color:#fff;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">✅ Accepter l'offre</button>
+        <button onclick="event.stopPropagation();respondOffer('${o._id}','reject')" style="flex:1;padding:.6rem;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#ef4444;font-family:'Chakra Petch';font-weight:700;font-size:.8rem;cursor:pointer">❌ Refuser</button>
       </div>`:`<button onclick="cMod('tradeDetailM')" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;cursor:pointer;margin-top:.3rem">Fermer</button>`}
     </div>`;
   document.getElementById('tradeDetailM').classList.add('on');
@@ -3119,16 +3119,18 @@ async function respondOffer(offerId, action){
     
     if(action==='accept'&&offer&&offer.offeredCards&&offer.offeredCards.length){
       _tradeRevealActive=true;
+      // Show card reveal in the trade detail modal
       showTradeAcceptReveal(offer);
+      // Modal should be open - ensure it is
+      document.getElementById('tradeDetailM').classList.add('on');
       // Reload data in background silently
       setTimeout(async()=>{
         await reloadUserData();
-        // Don't renderTrades — keep reveal open
       },1000);
     }else{
       toast(action==='accept'?'✅ Offre acceptée !':'❌ Offre refusée','ok');
-      await loadTrades();renderTrades();
       cMod('tradeDetailM');
+      await loadTrades();renderTrades();
     }
   }catch(err){toast(err.message||'Erreur','err')}
 }
@@ -3401,23 +3403,35 @@ if(_socket){
   _socket.on('product:deleted',()=>loadProductsFromAPI());
   // Trade notifications
   _socket.on('trade:newOffer',(data)=>{
+    console.log('📨 trade:newOffer',data);
     if(currentUser&&data.toUserId===currentUser.id){
       checkTradeNotifs();
       toast(`🔄 Nouvelle offre d'échange de @${data.fromUsername}`,'ok');
-      if(!_tradeRevealActive&&document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
-        loadTrades().then(()=>renderTrades());
+      if(!_tradeRevealActive){
+        loadTrades().then(()=>{if(document.querySelector('#p-trade.on'))renderTrades()});
       }
     }
   });
   _socket.on('trade:offerResponse',(data)=>{
-    if(currentUser&&(data.fromUserId===currentUser.id||data.toUserId===currentUser.id)){
-      checkTradeNotifs();
-      if(data.fromUserId===currentUser.id){
-        toast(data.action==='accept'?`✅ @${data.toUsername} a accepté votre offre !`:`❌ @${data.toUsername} a refusé votre offre`,'ok');
-      }
-      if(!_tradeRevealActive&&document.querySelector('[data-p="trade"].nb.on,[data-p="trade"].mb.on')){
-        loadTrades().then(()=>renderTrades());
-      }
+    console.log('📨 trade:offerResponse',data);
+    if(!currentUser)return;
+    const isFrom=data.fromUserId===currentUser.id;
+    const isTo=data.toUserId===currentUser.id;
+    if(!isFrom&&!isTo)return;
+    
+    checkTradeNotifs();
+    
+    if(isFrom&&data.action==='accept'){
+      // I'm the offer sender and my offer was accepted — show card reveal with listing cards I received
+      toast(`✅ @${data.toUsername} a accepté votre offre !`,'ok');
+      // Fetch listing cards for reveal
+      showOfferAcceptedReveal(data);
+    }else if(isFrom&&data.action==='reject'){
+      toast(`❌ @${data.toUsername} a refusé votre offre`,'ok');
+    }
+    
+    if(!_tradeRevealActive){
+      loadTrades().then(()=>{if(document.querySelector('#p-trade.on'))renderTrades()});
     }
   });
   _socket.on('trade:dataChanged',(data)=>{
@@ -3427,6 +3441,70 @@ if(_socket){
     }
   });
 }
+
+// Show card reveal for the offer sender when their offer is accepted
+async function showOfferAcceptedReveal(data){
+  try{
+    // We need the listing data to show what cards we received
+    const listingsRes=await API('/trades?status=completed');
+    const listing=(listingsRes.listings||[]).find(l=>l._id===data.listingId);
+    if(!listing||!listing.cards||!listing.cards.length)return;
+    
+    _tradeRevealActive=true;
+    const cards=listing.cards;
+    const rCol={common:'#94a3b8',uncommon:'#34d399',rare:'#60a5fa',ultra:'#fbbf24',secret:'#c084fc'};
+    const rl={common:'Commune',uncommon:'Peu commune',rare:'Rare',ultra:'Ultra Rare',secret:'Secrète'};
+    const now=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+    
+    const cardsHTML=cards.map((c,i)=>{
+      const col=rCol[c.rarity]||'#94a3b8';
+      return `<div style="text-align:center;animation:mktCardIn .6s ease-out ${i*0.15}s both">
+        <div style="display:inline-block;position:relative;margin-bottom:.5rem">
+          ${c.img?`<img src="${c.img}" style="width:120px;border-radius:10px;box-shadow:0 8px 32px ${col}44,0 0 40px ${col}22;border:2px solid ${col}66">`
+          :`<div style="width:120px;height:168px;background:var(--vc-bg-surface);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 8px 32px ${col}44;border:2px solid ${col}66">🎴</div>`}
+        </div>
+        <div style="font-family:'Exo 2';font-weight:800;font-size:.82rem">${c.name}</div>
+        <div style="font-size:.6rem;font-weight:600;color:${col};text-transform:uppercase">${rl[c.rarity]||c.rarity}</div>
+        <div style="font-family:'JetBrains Mono';font-size:.7rem;color:var(--vc-gold);margin-top:.1rem">${(c.value||0).toFixed(2)}€</div>
+      </div>`;
+    }).join('');
+    
+    const totalValue=cards.reduce((s,c)=>s+(c.value||0),0);
+    
+    document.getElementById('tradeDetailContent').innerHTML=`
+      <div style="background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(99,102,241,.15));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
+        <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🎉</div>
+        <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Offre acceptée !</div>
+        <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">@${data.toUsername} a accepté votre échange — vous recevez ${cards.length} carte${cards.length>1?'s':''}</div>
+      </div>
+      <div style="padding:1.2rem 1.5rem">
+        <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem">${cardsHTML}</div>
+        <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.7rem;margin-bottom:.8rem;font-size:.72rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
+            <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
+            <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${data.toUsername}</div>
+            <div>📅 Date</div><div style="text-align:right">${now}</div>
+          </div>
+        </div>
+        <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
+          <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
+          <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
+            <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${data.toUsername}</span>
+            <span>→</span>
+            <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <button onclick="tradeAcceptAction('receive',${JSON.stringify(cards).replace(/"/g,'&quot;')})" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(251,191,36,.2);background:rgba(251,191,36,.08);color:var(--vc-gold);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">📦 Recevoir les cartes</button>
+          <button onclick="tradeAcceptAction('store',[])" style="width:100%;padding:.65rem;border-radius:8px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.08);color:var(--vc-primary-light);font-family:'Chakra Petch';font-weight:700;font-size:.82rem;cursor:pointer">🗄️ Stocker dans la collection / Fermer</button>
+        </div>
+      </div>`;
+    document.getElementById('tradeDetailM').classList.add('on');
+  }catch(e){console.error('showOfferAcceptedReveal:',e)}
+}
+
+// Periodic trade notification check (every 30s)
+setInterval(()=>{if(currentUser)checkTradeNotifs()},30000);
 
 window.addEventListener('storage',function(e){
   if(!e.key)return;

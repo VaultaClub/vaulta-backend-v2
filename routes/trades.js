@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 20;
     const skip = (page - 1) * limit;
-    const filter = { status: 'active' };
+    const filter = { status: req.query.status || 'active' };
     
     // Optional filters
     if (req.query.rarity && req.query.rarity !== 'all') {
