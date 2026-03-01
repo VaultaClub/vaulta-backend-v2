@@ -45,6 +45,13 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: '' },
   bio: { type: String, default: '', maxlength: 200 },
   adminNote: { type: String, default: '' },
+  
+  // Referral system
+  referralCode: { type: String, unique: true, sparse: true },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  referralCount: { type: Number, default: 0 },
+  referralBonusClaimed: { type: Boolean, default: false },
+  
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
@@ -52,6 +59,14 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+// Generate referral code on creation
+userSchema.pre('save', function(next) {
+  if (!this.referralCode) {
+    this.referralCode = this.username.toUpperCase().slice(0, 4) + crypto.randomBytes(3).toString('hex').toUpperCase();
+  }
   next();
 });
 
@@ -111,6 +126,8 @@ userSchema.statics.safeUser = function(user) {
     bio: user.bio || '',
     emailVerified: user.emailVerified,
     twoFAEnabled: user.twoFA?.enabled || false,
+    referralCode: user.referralCode || '',
+    referralCount: user.referralCount || 0,
     createdAt: user.createdAt,
     lastLogin: user.lastLogin,
   };

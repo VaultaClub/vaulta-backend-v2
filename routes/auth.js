@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const { generateOTP, sendOTP, sendWelcome } = require('../services/emailService');
@@ -11,6 +12,48 @@ const router = express.Router();
 
 const genToken = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 const gen2FAToken = (userId) => jwt.sign({ userId, pending2FA: true }, process.env.JWT_SECRET, { expiresIn: '5m' });
+
+const REFERRAL_NEW_USER_BONUS = 12; // €12 for new user
+const REFERRAL_REFERRER_BONUS = 5;  // €5 for referrer
+
+// Apply referral bonuses to both users' vc_data settings
+async function applyReferralBonus(newUser, referrer) {
+  try {
+    const Setting = mongoose.model('Setting');
+    const now = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    // Give new user 12€
+    const newUserKey = 'vc_data_' + newUser._id.toString();
+    const newUserData = await Setting.findOne({ key: newUserKey });
+    const newBal = (newUserData?.value?.bal || 0) + REFERRAL_NEW_USER_BONUS;
+    const newTx = newUserData?.value?.txHistory || [];
+    newTx.unshift({ type: 'dep', desc: `🎁 Bonus parrainage de @${referrer.username}`, amt: REFERRAL_NEW_USER_BONUS, date: now });
+    await Setting.findOneAndUpdate(
+      { key: newUserKey },
+      { value: { ...newUserData?.value, bal: newBal, coll: newUserData?.value?.coll || [], txHistory: newTx, negoHistory: newUserData?.value?.negoHistory || [] } },
+      { upsert: true }
+    );
+    
+    // Give referrer 5€
+    const refKey = 'vc_data_' + referrer._id.toString();
+    const refData = await Setting.findOne({ key: refKey });
+    const refBal = (refData?.value?.bal || 0) + REFERRAL_REFERRER_BONUS;
+    const refTx = refData?.value?.txHistory || [];
+    refTx.unshift({ type: 'dep', desc: `🎁 Bonus parrainage: @${newUser.username} inscrit`, amt: REFERRAL_REFERRER_BONUS, date: now });
+    await Setting.findOneAndUpdate(
+      { key: refKey },
+      { value: { ...refData?.value, bal: refBal, txHistory: refTx } },
+      { upsert: true }
+    );
+    
+    // Update referrer count
+    await User.updateOne({ _id: referrer._id }, { $inc: { referralCount: 1 } });
+    
+    console.log(`🎁 Referral bonus: @${newUser.username} +${REFERRAL_NEW_USER_BONUS}€, @${referrer.username} +${REFERRAL_REFERRER_BONUS}€`);
+  } catch (err) {
+    console.error('Referral bonus error:', err.message);
+  }
+}
 
 // In-memory OTP store (code -> { email, code, type, userId, username, password, expires })
 // For production, use Redis
@@ -36,7 +79,7 @@ const avatarUpload = multer({
 // POST /api/auth/register — Step 1: validate + send OTP
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, password2 } = req.body;
+    const { username, email, password, password2, referralCode } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: 'Tous les champs sont requis' });
     if (username.length < 3 || username.length > 20) return res.status(400).json({ error: 'Pseudo : 3 à 20 caractères' });
     if (!/^[a-zA-Z0-9_-]+$/.test(username)) return res.status(400).json({ error: 'Pseudo : lettres, chiffres, - et _ uniquement' });
@@ -49,27 +92,44 @@ router.post('/register', async (req, res) => {
     if (await User.findOne({ email: email.toLowerCase() })) return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     if (await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } })) return res.status(400).json({ error: 'Ce pseudo est déjà pris' });
     
+    // Validate referral code if provided
+    let referrer = null;
+    if (referralCode && referralCode.trim()) {
+      referrer = await User.findOne({ referralCode: referralCode.trim().toUpperCase() });
+      if (!referrer) return res.status(400).json({ error: 'Code de parrainage invalide' });
+    }
+    
     // Generate OTP and store pending registration
     const code = generateOTP();
     const otpKey = `reg_${email.toLowerCase()}`;
     otpStore.set(otpKey, {
       email: email.toLowerCase(),
       username,
-      password, // Will be hashed when user is created
+      password,
+      referralCode: referrer ? referralCode.trim().toUpperCase() : null,
       code,
       type: 'register',
-      expires: Date.now() + 10 * 60 * 1000, // 10 min
+      expires: Date.now() + 10 * 60 * 1000,
     });
     
     // Send OTP email
     const sent = await sendOTP(email, code, 'register', username);
     if (!sent) {
-      // SMTP fallback: create user directly without email verification
+      // SMTP fallback: create user directly
       console.warn('⚠️ SMTP failed for register OTP, creating user directly:', email);
-      const user = new User({ username, email: email.toLowerCase(), password, emailVerified: false });
+      const user = new User({
+        username, email: email.toLowerCase(), password, emailVerified: false,
+        referredBy: referrer ? referrer._id : undefined,
+      });
       await user.save();
+      
+      // Apply referral bonuses
+      if (referrer) {
+        await applyReferralBonus(user, referrer);
+      }
+      
       const token = genToken(user._id);
-      return res.json({ token, user: User.safeUser(user), message: 'Compte créé (vérification email indisponible)' });
+      return res.json({ token, user: User.safeUser(user), message: 'Compte créé' + (referrer ? ' avec bonus parrainage !' : '') });
     }
     
     res.json({ requiresOTP: true, email: email.toLowerCase(), message: 'Code envoyé par email' });
@@ -96,13 +156,25 @@ router.post('/verify-register', async (req, res) => {
     // OTP valid — create user
     otpStore.delete(otpKey);
     
+    // Check referral
+    let referrer = null;
+    if (pending.referralCode) {
+      referrer = await User.findOne({ referralCode: pending.referralCode });
+    }
+    
     const user = await User.create({
       username: pending.username,
       email: pending.email,
       password: pending.password,
-      balance: 45,
+      balance: 0,
       emailVerified: true,
+      referredBy: referrer ? referrer._id : undefined,
     });
+    
+    // Apply referral bonuses
+    if (referrer) {
+      await applyReferralBonus(user, referrer);
+    }
     
     user.lastLogin = new Date();
     user.lastLoginIP = req.ip;
