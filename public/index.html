@@ -2457,7 +2457,7 @@ function updateAuthUI(){
   const avText=document.getElementById('avText');
   const avBtn=document.getElementById('avBtn');
   if(currentUser){
-    pill.style.display='';bal=currentUser.balance||bal;updBal();
+    pill.style.display='';updBal();
     const initials=currentUser.username.substring(0,2).toUpperCase();
     // Image avatar
     if(currentUser.avatar&&currentUser.avatar.startsWith('/')){
