@@ -142,8 +142,13 @@ const start = async () => {
   await connectDB();
   
   // Verify SMTP connection
-  const { verifyConnection } = require('./services/emailService');
-  verifyConnection().catch(() => {});
+  try {
+    const { verifyConnection } = require('./services/emailService');
+    const smtpOk = await verifyConnection();
+    console.log(smtpOk ? '✅ SMTP connecté' : '❌ SMTP indisponible (fallback actif)');
+  } catch (e) {
+    console.log('❌ SMTP erreur:', e.message, '(fallback actif)');
+  }
   
   // Daily price sync cron (runs at 6:00 AM every day)
   const { syncAllProducts, applyPricesToPool } = require('./services/priceSync');

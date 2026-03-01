@@ -2335,11 +2335,20 @@ async function doLogin(){
       return;
     }
     
-    // Direct login (shouldn't happen with OTP flow but fallback)
-    authToken=data.token;localStorage.setItem('vc_token',authToken);
-    currentUser=data.user;
-    syncUserToAdmin(currentUser);
-    onLoginSuccess();cMod('authM');toast('Bienvenue '+currentUser.username+' !','ok');
+    // 2FA required (SMTP fallback skipped OTP but 2FA is on)
+    if(data.requires2FA){
+      _pending2FAToken=data.tempToken;
+      authTab('2fa');
+      return;
+    }
+    
+    // Direct login (SMTP fallback)
+    if(data.token){
+      authToken=data.token;localStorage.setItem('vc_token',authToken);
+      currentUser=data.user;
+      syncUserToAdmin(currentUser);
+      onLoginSuccess();cMod('authM');toast('Bienvenue '+currentUser.username+' !','ok');
+    }
   }catch(err){showAuthErr(err.message)}
   finally{btn.disabled=false;btn.textContent='Se connecter'}
 }
@@ -2388,10 +2397,12 @@ async function doRegister(){
     }
     
     // Direct create (fallback)
-    authToken=data.token;localStorage.setItem('vc_token',authToken);
-    currentUser=data.user;
-    syncUserToAdmin(currentUser);
-    onLoginSuccess();cMod('authM');toast('Compte créé ! Bienvenue '+currentUser.username+' 🎉','ok');
+    if(data.token){
+      authToken=data.token;localStorage.setItem('vc_token',authToken);
+      currentUser=data.user;
+      syncUserToAdmin(currentUser);
+      onLoginSuccess();cMod('authM');toast('Compte créé ! Bienvenue '+currentUser.username+' 🎉','ok');
+    }
   }catch(err){showAuthErr(err.message)}
   finally{btn.disabled=false;btn.textContent='Créer mon compte'}
 }

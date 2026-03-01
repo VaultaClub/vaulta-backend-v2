@@ -63,7 +63,14 @@ router.post('/register', async (req, res) => {
     
     // Send OTP email
     const sent = await sendOTP(email, code, 'register', username);
-    if (!sent) return res.status(500).json({ error: 'Erreur d\'envoi de l\'email. Vérifiez votre adresse.' });
+    if (!sent) {
+      // SMTP fallback: create user directly without email verification
+      console.warn('⚠️ SMTP failed for register OTP, creating user directly:', email);
+      const user = new User({ username, email: email.toLowerCase(), password, emailVerified: false });
+      await user.save();
+      const token = genToken(user._id);
+      return res.json({ token, user: User.safeUser(user), message: 'Compte créé (vérification email indisponible)' });
+    }
     
     res.json({ requiresOTP: true, email: email.toLowerCase(), message: 'Code envoyé par email' });
   } catch (err) {
@@ -176,7 +183,21 @@ router.post('/login', async (req, res) => {
     });
     
     const sent = await sendOTP(email, code, 'login', user.username);
-    if (!sent) return res.status(500).json({ error: 'Erreur d\'envoi de l\'email' });
+    if (!sent) {
+      // SMTP fallback: if email fails, login directly (skip OTP)
+      console.warn('⚠️ SMTP failed for login OTP, falling back to direct login for:', email);
+      await user.resetLoginAttempts();
+      user.addLoginHistory(req.ip, req.get('User-Agent'), true);
+      user.lastLogin = new Date();
+      await user.save();
+      
+      if (user.twoFA && user.twoFA.enabled) {
+        return res.json({ requires2FA: true, tempToken: gen2FAToken(user._id) });
+      }
+      
+      const token = genToken(user._id);
+      return res.json({ token, user: User.safeUser(user) });
+    }
     
     res.json({ requiresOTP: true, email: email.toLowerCase(), message: 'Code envoyé par email' });
   } catch (err) {
