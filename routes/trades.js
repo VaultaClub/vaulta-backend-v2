@@ -1,7 +1,22 @@
 const express = require('express');
 const { TradeListing, TradeOffer } = require('../models/Trade');
+const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const router = express.Router();
+
+// Helper: enrich listings/offers with fresh avatar from User collection
+async function enrichAvatars(docs, field='userId', avatarField='userAvatar') {
+  if (!docs.length) return docs;
+  const userIds = [...new Set(docs.map(d => d[field]?.toString()).filter(Boolean))];
+  const users = await User.find({ _id: { $in: userIds } }).select('_id avatar').lean();
+  const avatarMap = {};
+  users.forEach(u => { avatarMap[u._id.toString()] = u.avatar || ''; });
+  return docs.map(d => {
+    const obj = d.toObject ? d.toObject() : { ...d };
+    obj[avatarField] = avatarMap[obj[field]?.toString()] || obj[avatarField] || '';
+    return obj;
+  });
+}
 
 // GET /api/trades — All active listings (paginated)
 router.get('/', async (req, res) => {
@@ -24,7 +39,8 @@ router.get('/', async (req, res) => {
       TradeListing.countDocuments(filter)
     ]);
     
-    res.json({ listings, total, page, pages: Math.ceil(total / limit) });
+    const enriched = await enrichAvatars(listings);
+    res.json({ listings: enriched, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -34,7 +50,8 @@ router.get('/', async (req, res) => {
 router.get('/mine', auth, async (req, res) => {
   try {
     const listings = await TradeListing.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50);
-    res.json({ listings });
+    const enriched = await enrichAvatars(listings);
+    res.json({ listings: enriched });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -47,7 +64,9 @@ router.get('/offers/mine', auth, async (req, res) => {
       TradeOffer.find({ toUserId: req.user._id }).sort({ createdAt: -1 }).limit(50),
       TradeOffer.find({ fromUserId: req.user._id }).sort({ createdAt: -1 }).limit(50),
     ]);
-    res.json({ received, sent });
+    const enrichedRecv = await enrichAvatars(received, 'fromUserId', 'fromAvatar');
+    const enrichedSent = await enrichAvatars(sent, 'fromUserId', 'fromAvatar');
+    res.json({ received: enrichedRecv, sent: enrichedSent });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
