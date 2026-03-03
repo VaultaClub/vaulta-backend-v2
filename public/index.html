@@ -950,8 +950,8 @@ async function loadProductsFromAPI(){
     P=products.map(p=>({...p,id:p._id||p.id,pool:p.pool||[]}));
     P.forEach(p=>qty[p.id]=qty[p.id]||1);
     productsLoaded=true;
-    // Cache products for instant display on next visit
-    try{_cc['vc_products_cache']=P;LS.set('vc_products_cache',P)}catch(e){}
+    // Cache products in localStorage for instant display on next visit
+    try{localStorage.setItem('vc_products_cache',JSON.stringify(P))}catch(e){}
     console.log(`✅ ${P.length} produits chargés depuis l'API`);
     return P;
   }catch(e){
@@ -965,14 +965,17 @@ async function loadProductsFromAPI(){
 // Restore products from cache instantly (before any API call)
 function loadProductsFromCache(){
   try{
-    const cached=LS.get('vc_products_cache',null);
-    if(cached&&cached.length>0){
-      P=cached;
-      P.forEach(p=>qty[p.id]=qty[p.id]||1);
-      productsLoaded=true;
-      renderShop();
-      console.log(`⚡ ${P.length} produits affichés depuis le cache`);
-      return true;
+    const raw=localStorage.getItem('vc_products_cache');
+    if(raw){
+      const cached=JSON.parse(raw);
+      if(cached&&cached.length>0){
+        P=cached;
+        P.forEach(p=>qty[p.id]=qty[p.id]||1);
+        productsLoaded=true;
+        renderShop();
+        console.log(`⚡ ${P.length} produits affichés depuis le cache`);
+        return true;
+      }
     }
   }catch(e){}
   return false;
