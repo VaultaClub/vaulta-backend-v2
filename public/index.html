@@ -2483,8 +2483,8 @@ function updateAuthUI(){
   if(currentUser){
     pill.style.display='';updBal();
     const initials=currentUser.username.substring(0,2).toUpperCase();
-    // Image avatar
-    if(currentUser.avatar&&currentUser.avatar.startsWith('/')){
+    // Image avatar (base64 data URI or legacy path)
+    if(currentUser.avatar&&(currentUser.avatar.startsWith('data:')||currentUser.avatar.startsWith('/'))){
       avText.innerHTML=`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     }else{
       avText.textContent=currentUser.avatar||initials;
@@ -2499,8 +2499,9 @@ function updateAuthUI(){
 function renderProfile(){
   if(!currentUser)return;
   const av=document.getElementById('profAv');
-  // Avatar: image URL or emoji or initials
-  if(currentUser.avatar&&currentUser.avatar.startsWith('/')){
+  // Avatar: image URL (base64 or legacy path) or emoji or initials
+  const profInitials=currentUser.username.substring(0,2).toUpperCase();
+  if(currentUser.avatar&&(currentUser.avatar.startsWith('data:')||currentUser.avatar.startsWith('/'))){
     av.innerHTML=`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   }else if(currentUser.avatar){
     av.innerHTML='';av.textContent=currentUser.avatar;

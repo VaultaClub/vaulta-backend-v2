@@ -446,16 +446,23 @@ router.put('/profile', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
 });
 
-// POST /api/auth/avatar
+// POST /api/auth/avatar — store as base64 in MongoDB
 router.post('/avatar', auth, (req, res) => {
-  avatarUpload.single('avatar')(req, res, async (err) => {
+  // Use multer with memory storage (no disk write)
+  const memUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+    fileFilter: (req, file, cb) => {
+      if (['image/jpeg','image/png','image/webp','image/gif'].includes(file.mimetype)) cb(null, true);
+      else cb(new Error('Format non supporté'));
+    }
+  }).single('avatar');
+
+  memUpload(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
-    if (req.user.avatar) {
-      const old = path.join(__dirname, '..', 'public', req.user.avatar);
-      if (fs.existsSync(old)) try { fs.unlinkSync(old); } catch(e) {}
-    }
-    req.user.avatar = `/uploads/avatars/${req.file.filename}`;
+    const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    req.user.avatar = base64;
     await req.user.save();
     res.json({ avatar: req.user.avatar });
   });
