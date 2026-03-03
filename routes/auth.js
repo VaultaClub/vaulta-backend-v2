@@ -414,27 +414,19 @@ router.post('/logout', (req, res) => { res.clearCookie('token'); res.json({ mess
 // GET /api/auth/me
 router.get('/me', auth, async (req, res) => {
   try {
-    // Generate referral code for existing users who don't have one
     if (!req.user.referralCode) {
       const code = req.user.username.toUpperCase().slice(0, 4) + require('crypto').randomBytes(3).toString('hex').toUpperCase();
-      console.log(`🎫 Generating referral code for ${req.user.username}: ${code}`);
       try {
         await User.updateOne({ _id: req.user._id }, { $set: { referralCode: code } });
         req.user.referralCode = code;
-        console.log(`✅ Referral code saved for ${req.user.username}`);
       } catch (e) {
-        console.error('❌ Referral code save error:', e.message);
-        // If duplicate key, try with different code
         const code2 = require('crypto').randomBytes(5).toString('hex').toUpperCase();
         await User.updateOne({ _id: req.user._id }, { $set: { referralCode: code2 } });
         req.user.referralCode = code2;
       }
     }
-    const safe = User.safeUser(req.user);
-    console.log(`👤 /me response for ${req.user.username}, referralCode: ${safe.referralCode}`);
-    res.json(safe);
+    res.json(User.safeUser(req.user));
   } catch (err) {
-    console.error('❌ /me error:', err.message);
     res.json(User.safeUser(req.user));
   }
 });

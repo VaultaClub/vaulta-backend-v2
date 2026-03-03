@@ -950,6 +950,8 @@ async function loadProductsFromAPI(){
     P=products.map(p=>({...p,id:p._id||p.id,pool:p.pool||[]}));
     P.forEach(p=>qty[p.id]=qty[p.id]||1);
     productsLoaded=true;
+    // Cache products for instant display on next visit
+    try{_cc['vc_products_cache']=P;LS.set('vc_products_cache',P)}catch(e){}
     console.log(`✅ ${P.length} produits chargés depuis l'API`);
     return P;
   }catch(e){
@@ -958,6 +960,22 @@ async function loadProductsFromAPI(){
     productsLoaded=true;
     return P;
   }
+}
+
+// Restore products from cache instantly (before any API call)
+function loadProductsFromCache(){
+  try{
+    const cached=LS.get('vc_products_cache',null);
+    if(cached&&cached.length>0){
+      P=cached;
+      P.forEach(p=>qty[p.id]=qty[p.id]||1);
+      productsLoaded=true;
+      renderShop();
+      console.log(`⚡ ${P.length} produits affichés depuis le cache`);
+      return true;
+    }
+  }catch(e){}
+  return false;
 }
 
 // Load pool for a specific product (on-demand, when opening booster)
@@ -1008,15 +1026,18 @@ function saveProducts(){
   // Stock changes now go through API — nothing to save locally
 }
 
-/* ============ STARTUP — Load settings then products from API ============ */
-const _settingsReady = _loadClientSettings().then(()=>{
-  return loadProductsFromAPI();
-}).then(()=>{
+/* ============ STARTUP — Cache-first + parallel loading ============ */
+// 1) Show cached products instantly if available
+const _hadCache = loadProductsFromCache();
+
+// 2) Load settings + fresh products in parallel
+const _settingsReady = Promise.all([
+  _loadClientSettings(),
+  loadProductsFromAPI()
+]).then(()=>{
   console.log("🚀 Produits chargés, boutique prête");
-  renderShop(); // Render now that products are loaded
-  // Enrich old collection cards with data from current pools
+  renderShop(); // Re-render with fresh API data
   enrichCollectionCards();
-  // Pre-cache images for loaded pools
   P.forEach(p=>{
     if(p.pool&&p.pool.length>0){
       p.pool.forEach(c=>{if(c.imgLow){const i=new Image();i.src=c.imgLow}});
@@ -2512,7 +2533,6 @@ function renderProfile(){
   const icons={dep:'💰',pur:'🛒',sale:'💱',rec:'♻️'};
   document.getElementById('profHistory').innerHTML=recent.length?recent.map(t=>`<div class="prof-row"><label>${icons[t.type]||'📝'} ${t.desc}</label><span style="color:${t.amt>0?'var(--vc-green)':'var(--vc-fire)'};font-family:JetBrains Mono;font-size:.8rem">${t.amt>0?'+':''}${t.amt.toFixed(2)}€</span></div>`).join(''):'<p style="font-size:.8rem;color:var(--vc-text-dim);padding:.5rem 0">Aucune transaction</p>';
   // Referral
-  console.log('🎫 Referral code:', currentUser.referralCode, 'count:', currentUser.referralCount);
   document.getElementById('profReferralCode').value=currentUser.referralCode||'';
   document.getElementById('profRefCount').textContent=currentUser.referralCount||0;
   document.getElementById('profRefEarned').textContent=((currentUser.referralCount||0)*5).toFixed(0)+'€';
