@@ -543,6 +543,12 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
   <div id="tradeDetailContent"></div>
 </div></div>
 
+<!-- User Profile Modal -->
+<div class="mbg" id="userProfileM" onclick="if(event.target===this)cMod('userProfileM')" style="z-index:10000"><div class="mod" style="max-width:420px;padding:0;overflow:hidden;border-radius:16px">
+  <button class="mx" onclick="cMod('userProfileM')" style="position:absolute;right:12px;top:12px;z-index:10">×</button>
+  <div id="userProfileContent" style="text-align:center"><div style="padding:2rem;color:var(--vc-text-dim)">Chargement...</div></div>
+</div></div>
+
 <div class="pg" id="p-sup">
   <div class="prof">
     <h1>Support</h1>
@@ -1969,7 +1975,7 @@ function mkCard(item,feat){
   if(h&&h.refusals&&h.refusals.length)negoHTML=`<div class="mk-nego-hist">❌ ${h.refusals.length} offre(s) refusée(s)</div>`;
   const safe=JSON.stringify(item).replace(/'/g,"\\'").replace(/"/g,'&quot;');
   return `<div class="mk ${feat?'featured':''}" onclick='showMktDetail(${safe})'>
-    <div class="mk-top"><span class="mk-slr">@${item.seller}</span><span class="mk-date">${item.listDate||''}</span></div>
+    <div class="mk-top"><span class="mk-slr" style="cursor:pointer" onclick="event.stopPropagation();openUserProfile('${item.seller}')">@${item.seller}</span><span class="mk-date">${item.listDate||''}</span></div>
     <div class="mk-vis">${item.img?`<img src="${item.img}">`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem">${item.e}</div>`}</div>
     <div class="mk-nm">${item.name}</div><div class="mk-set">${item.set}</div>
     <div class="mk-ref">Réf: ${item.boosterRef||'N/A'} — Tiré le ${item.openDate||'N/A'}</div>
@@ -1988,7 +1994,7 @@ function showMktDetail(item){
     <div class="cdm-row">📦 Set : <span>${item.set}</span></div>
     <div class="cdm-row">🏷️ Réf booster : <span>${item.boosterRef||'N/A'}</span></div>
     <div class="cdm-row">📅 Tiré le : <span>${item.openDate||'N/A'}</span></div>
-    <div class="cdm-row">👤 Vendeur : <span>@${item.seller}</span></div>
+    <div class="cdm-row">👤 Vendeur : <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${item.seller}')">@${item.seller}</span></div>
     <div class="cdm-row">🗓️ Mis en vente : <span>${item.listDate||'N/A'}</span></div>
     <div class="cdm-row" style="cursor:pointer;color:var(--vc-primary-light)" onclick="toast('🎬 Vidéo du booster ${item.boosterRef||''} bientôt disponible !','ok')">▶️ Voir la vidéo d'ouverture</div>`;
   if(h&&h.refusals&&h.refusals.length){metaHTML+=`<div class="cdm-row" style="color:var(--vc-fire)">❌ Offres refusées : ${h.refusals.map(r=>r.toFixed(2)+'€').join(', ')}</div>`}
@@ -2025,7 +2031,7 @@ function confirmBuyMkt(item){
           <div style="font-family:'Exo 2';font-weight:700;font-size:.95rem;margin-bottom:.2rem">${item.name}</div>
           <div style="font-size:.68rem;color:${rCol[item.r]||'var(--vc-text-dim)'};font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem">${rl[item.r]||item.r}</div>
           <div style="font-size:.72rem;color:var(--vc-text-dim)">${item.set||''}</div>
-          <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.15rem">Vendeur : <span style="color:var(--vc-primary-light)">@${item.seller}</span></div>
+          <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.15rem">Vendeur : <span style="color:var(--vc-primary-light);cursor:pointer" onclick="openUserProfile('${item.seller}')">@${item.seller}</span></div>
         </div>
       </div>
       <!-- Price summary -->
@@ -2106,7 +2112,7 @@ function showMktSuccess(card, item, price){
         <div>💰 Prix payé</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${price.toFixed(2)}€</div>
         ${card.cardNum?`<div>🔢 N° carte</div><div style="text-align:right;font-family:'JetBrains Mono'">${card.cardNum}${card.setOfficial?'/'+card.setOfficial:''}</div>`:''}
         <div>📦 Set</div><div style="text-align:right">${card.pName||card.series||'—'}</div>
-        <div>👤 Vendeur</div><div style="text-align:right;color:var(--vc-primary-light)">@${item.seller}</div>
+        <div>👤 Vendeur</div><div style="text-align:right;color:var(--vc-primary-light);cursor:pointer" onclick="openUserProfile('${item.seller}')">@${item.seller}</div>
         <div>📅 Acheté le</div><div style="text-align:right">${dateShort()}</div>
         ${card.boosterRef&&card.boosterRef!=='N/A'?`<div>🏷️ Réf booster</div><div style="text-align:right;font-family:'JetBrains Mono';font-size:.65rem">${card.boosterRef}</div>`:''}
       </div>
@@ -2541,6 +2547,61 @@ function renderProfile(){
   document.getElementById('profRefCount').textContent=currentUser.referralCount||0;
   document.getElementById('profRefEarned').textContent=((currentUser.referralCount||0)*5).toFixed(0)+'€';
 }
+
+// ============ PUBLIC USER PROFILE MODAL ============
+async function openUserProfile(username){
+  if(!username)return;
+  // Don't open own profile in modal
+  if(currentUser&&currentUser.username.toLowerCase()===username.toLowerCase()){go('prof');return}
+  document.getElementById('userProfileM').classList.add('on');
+  document.getElementById('userProfileContent').innerHTML='<div style="padding:2rem;color:var(--vc-text-dim)">Chargement...</div>';
+  try{
+    const res=await fetch('/api/auth/public/'+encodeURIComponent(username));
+    if(!res.ok)throw new Error('Not found');
+    const u=await res.json();
+    const isImg=u.avatar&&(u.avatar.startsWith('data:')||u.avatar.startsWith('/'));
+    const initials=u.username.substring(0,2).toUpperCase();
+    const avatarHTML=isImg
+      ?`<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      :`<span style="font-size:2rem">${u.avatar||initials}</span>`;
+    const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'—';
+    document.getElementById('userProfileContent').innerHTML=`
+      <div style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.2));padding:1.5rem 1.2rem 1rem;position:relative">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Exo 2';font-weight:900;margin:0 auto .6rem;overflow:hidden;border:3px solid rgba(255,255,255,.15)">${avatarHTML}</div>
+        <div style="font-family:'Exo 2';font-weight:800;font-size:1.2rem">@${u.username}</div>
+        ${u.bio?`<div style="font-size:.75rem;color:var(--vc-text-secondary);margin-top:.3rem;font-style:italic">${u.bio}</div>`:''}
+        <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.5rem">
+          <span style="background:var(--vc-primary);color:#fff;padding:.15rem .5rem;border-radius:6px;font-size:.68rem;font-weight:700;font-family:'JetBrains Mono'">Niv. ${u.level||1}</span>
+          <span style="font-size:.68rem;color:var(--vc-text-dim)">${u.xp||0} XP</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--vc-border)">
+        <div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)">
+          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-primary-light)">${u.cardCount}</div>
+          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Cartes</div>
+        </div>
+        <div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)">
+          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-gold)">${u.totalValue.toFixed(2)}€</div>
+          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Valeur</div>
+        </div>
+        <div style="padding:.8rem .5rem;text-align:center">
+          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-accent)">${u.boosterCount}</div>
+          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Boosters</div>
+        </div>
+      </div>
+      <div style="padding:.8rem 1.2rem">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--vc-text-dim);padding:.3rem 0">
+          <span>📅 Membre depuis</span><span style="color:var(--vc-text-secondary)">${joined}</span>
+        </div>
+      </div>
+      <div style="padding:0 1.2rem 1rem">
+        <button onclick="cMod('userProfileM')" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;cursor:pointer">Fermer</button>
+      </div>`;
+  }catch(e){
+    document.getElementById('userProfileContent').innerHTML='<div style="padding:2rem;color:var(--vc-fire)">Utilisateur introuvable</div><div style="padding:0 1.2rem 1rem"><button onclick="cMod(\'userProfileM\')" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:\'Chakra Petch\';font-weight:600;font-size:.78rem;cursor:pointer">Fermer</button></div>';
+  }
+}
+
 function openAvatarMenu(){
   const p=document.getElementById('avatarPicker');
   p.style.display=p.style.display==='none'?'block':'none';
@@ -2810,9 +2871,9 @@ function tradeListingCard(l, isMine){
   return `<div style="background:var(--vc-bg-card);border:1px solid var(--vc-border);border-radius:12px;padding:1rem;margin-bottom:.7rem;cursor:pointer;transition:all .2s" onclick="openTradeDetail('${lid}')" onmouseover="this.style.borderColor='rgba(99,102,241,.4)'" onmouseout="this.style.borderColor='var(--vc-border)'">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
       <div style="display:flex;align-items:center;gap:.5rem">
-        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff;font-weight:700;overflow:hidden">${l.userAvatar&&l.userAvatar.startsWith('/')?`<img src="${l.userAvatar}" style="width:100%;height:100%;object-fit:cover">`:(l.userAvatar||l.username.substring(0,2).toUpperCase())}</div>
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff;font-weight:700;overflow:hidden;cursor:pointer" onclick="event.stopPropagation();openUserProfile('${l.username}')">${l.userAvatar&&(l.userAvatar.startsWith('data:')||l.userAvatar.startsWith('/'))?`<img src="${l.userAvatar}" style="width:100%;height:100%;object-fit:cover">`:(l.userAvatar||l.username.substring(0,2).toUpperCase())}</div>
         <div>
-          <div style="font-weight:700;font-size:.82rem">${l.username}${statusBadge}</div>
+          <div style="font-weight:700;font-size:.82rem;cursor:pointer" onclick="event.stopPropagation();openUserProfile('${l.username}')">${l.username}${statusBadge}</div>
           <div style="font-size:.6rem;color:var(--vc-text-dim)">${timeAgo(l.createdAt)}</div>
         </div>
       </div>
@@ -2874,7 +2935,7 @@ function tradeOfferCard(o, dir){
   
   return `<div style="background:var(--vc-bg-card);border:1px solid ${o.status==='accepted'?'rgba(52,211,153,.3)':o.status==='pending'?'rgba(251,191,36,.2)':'var(--vc-border)'};border-radius:10px;padding:.8rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .2s" onclick="viewOfferDetail('${o._id}','${dir}')" onmouseover="this.style.borderColor='var(--vc-primary)'" onmouseout="this.style.borderColor='${o.status==='accepted'?'rgba(52,211,153,.3)':'var(--vc-border)'}'" >
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-      <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De @'+o.fromUsername:'À @'+o.toUsername}</div>
+      <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(\''+o.fromUsername+'\')">@'+o.fromUsername+'</span>':'À <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(\''+o.toUsername+'\')">@'+o.toUsername+'</span>'}</div>
       <span style="font-size:.65rem;color:${statusColors[o.status]};font-weight:600">${statusLabels[o.status]}</span>
     </div>
     ${offeredCards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${offeredCards.slice(0,6).map(c=>{
@@ -2952,10 +3013,10 @@ async function viewOfferDetail(offerId, dir){
   let pendingSection='';
   if(o.status!=='accepted'){
     pendingSection=`
-      <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🃏 Cartes proposées par @${o.fromUsername}</div>
+      <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🃏 Cartes proposées par <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${o.fromUsername}')">@${o.fromUsername}</span></div>
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.7rem">${makeCardGrid(offeredCards)}</div>
       ${listingCards.length?`
-        <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🎯 En échange de (annonce @${listing?.username||o.toUsername})</div>
+        <div style="font-size:.72rem;font-weight:600;margin-bottom:.4rem;color:var(--vc-text-secondary)">🎯 En échange de (annonce <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${listing?.username||o.toUsername}')">@${listing?.username||o.toUsername}</span>)</div>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin-bottom:.7rem">${makeCardGrid(listingCards)}</div>
       `:''}`;
   }
@@ -2965,7 +3026,7 @@ async function viewOfferDetail(offerId, dir){
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-family:'Exo 2';font-weight:800;font-size:.95rem">📋 Détail de l'offre</div>
-          <div style="font-size:.68rem;color:var(--vc-text-dim)">Échange avec @${otherUser} • ${timeAgo(o.createdAt)}</div>
+          <div style="font-size:.68rem;color:var(--vc-text-dim)">Échange avec <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${otherUser}')">@${otherUser}</span> • ${timeAgo(o.createdAt)}</div>
         </div>
         <span style="font-size:.7rem;color:${statusColors[o.status]};font-weight:700;background:${statusColors[o.status]}15;padding:.2rem .5rem;border-radius:6px">${statusLabels[o.status]}</span>
       </div>
@@ -3146,9 +3207,9 @@ function openTradeDetail(listingId){
   document.getElementById('tradeDetailContent').innerHTML=`
     <div style="background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.12));padding:1rem 1.2rem;border-bottom:1px solid var(--vc-border)">
       <div style="display:flex;align-items:center;gap:.5rem">
-        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;overflow:hidden">${l.userAvatar&&l.userAvatar.startsWith('/')?`<img src="${l.userAvatar}" style="width:100%;height:100%;object-fit:cover">`:(l.userAvatar||l.username.substring(0,2).toUpperCase())}</div>
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;overflow:hidden;cursor:pointer" onclick="openUserProfile('${l.username}')">${l.userAvatar&&(l.userAvatar.startsWith('data:')||l.userAvatar.startsWith('/'))?`<img src="${l.userAvatar}" style="width:100%;height:100%;object-fit:cover">`:(l.userAvatar||l.username.substring(0,2).toUpperCase())}</div>
         <div>
-          <div style="font-weight:700;font-size:.85rem">@${l.username}</div>
+          <div style="font-weight:700;font-size:.85rem;cursor:pointer" onclick="openUserProfile('${l.username}')">@${l.username}</div>
           <div style="font-size:.6rem;color:var(--vc-text-dim)">${timeAgo(l.createdAt)}</div>
         </div>
       </div>
@@ -3190,7 +3251,7 @@ function openMakeOffer(listingId){
   document.getElementById('tradeOfferContent').innerHTML=`
     <div style="background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(99,102,241,.12));padding:1rem 1.2rem;border-bottom:1px solid var(--vc-border)">
       <div style="font-family:'Exo 2';font-weight:800;font-size:.95rem">🤝 Faire une offre</div>
-      <div style="font-size:.68rem;color:var(--vc-text-dim)">à @${listing?listing.username:'...'}</div>
+      <div style="font-size:.68rem;color:var(--vc-text-dim)">à <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${listing?listing.username:''}')">${listing?'@'+listing.username:'...'}</span></div>
     </div>
     <div style="padding:1rem 1.2rem">
       ${listing?`<div style="font-size:.7rem;color:var(--vc-text-dim);margin-bottom:.5rem">Cherche : <em>${listing.lookingFor||'Toute proposition'}</em></div>`:''}
@@ -3351,7 +3412,7 @@ function showTradeAcceptReveal(offer){
     <div style="background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(99,102,241,.12));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
       <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🤝</div>
       <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Échange accepté !</div>
-      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">Vous avez reçu ${cards.length} carte${cards.length>1?'s':''} de @${offer.fromUsername}</div>
+      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">Vous avez reçu ${cards.length} carte${cards.length>1?'s':''} de <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${offer.fromUsername}')">@${offer.fromUsername}</span></div>
     </div>
     
     <div style="padding:1.2rem 1.5rem">
@@ -3365,7 +3426,7 @@ function showTradeAcceptReveal(offer){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
           <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
           ${offer.moneyOffer?`<div>💵 Compensation</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-green)">+${offer.moneyOffer.toFixed(2)}€</div>`:''}
-          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${offer.fromUsername}</div>
+          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light);cursor:pointer" onclick="openUserProfile('${offer.fromUsername}')">@${offer.fromUsername}</div>
           <div>📅 Date</div><div style="text-align:right">${now}</div>
         </div>
       </div>
@@ -3374,7 +3435,7 @@ function showTradeAcceptReveal(offer){
       <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
         <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
         <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
-          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${offer.fromUsername}</span>
+          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px;cursor:pointer" onclick="openUserProfile('${offer.fromUsername}')">@${offer.fromUsername}</span>
           <span>→</span>
           <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
           <span style="margin-left:auto;font-family:'JetBrains Mono'">${now}</span>
@@ -3679,21 +3740,21 @@ function openTradeBannerReveal(){
     <div style="background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(99,102,241,.15));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
       <div style="font-size:1.5rem;margin-bottom:.3rem;animation:mktPulse 1s ease-in-out">🎉</div>
       <div style="font-family:'Exo 2';font-weight:800;font-size:1.1rem;color:var(--vc-green)">Offre acceptée !</div>
-      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem">@${fromUser} a accepté votre échange</div>
+      <div style="font-size:.68rem;color:var(--vc-text-dim);margin-top:.2rem"><span style="cursor:pointer;color:var(--vc-primary-light)" onclick="openUserProfile('${fromUser}')">@${fromUser}</span> a accepté votre échange</div>
     </div>
     <div style="padding:1.2rem 1.5rem">
       <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem">${cardsHTML}</div>
       <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.7rem;margin-bottom:.8rem;font-size:.72rem">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;color:var(--vc-text-dim)">
           <div>💰 Valeur totale</div><div style="text-align:right;font-family:'JetBrains Mono';color:var(--vc-gold);font-weight:700">${totalValue.toFixed(2)}€</div>
-          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light)">@${fromUser}</div>
+          <div>👤 Échangé avec</div><div style="text-align:right;color:var(--vc-primary-light);cursor:pointer" onclick="openUserProfile('${fromUser}')">@${fromUser}</div>
           <div>📅 Date</div><div style="text-align:right">${now}</div>
         </div>
       </div>
       <div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.1);border-radius:8px;padding:.5rem;margin-bottom:.8rem">
         <div style="font-size:.65rem;font-weight:600;color:var(--vc-primary-light);margin-bottom:.3rem">📜 Historique de propriété</div>
         <div style="display:flex;align-items:center;gap:.3rem;font-size:.62rem;color:var(--vc-text-dim)">
-          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px">@${fromUser}</span>
+          <span style="background:rgba(99,102,241,.1);padding:.15rem .3rem;border-radius:4px;cursor:pointer" onclick="openUserProfile('${fromUser}')">@${fromUser}</span>
           <span>→</span>
           <span style="background:rgba(52,211,153,.1);padding:.15rem .3rem;border-radius:4px;color:var(--vc-green)">Vous</span>
         </div>

@@ -488,4 +488,38 @@ router.put('/password', auth, async (req, res) => {
 // GET /api/auth/sessions
 router.get('/sessions', auth, (req, res) => res.json({ sessions: req.user.loginHistory || [] }));
 
+// GET /api/auth/public/:username — Public profile (no auth required)
+router.get('/public/:username', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: { $regex: new RegExp(`^${req.params.username}$`, 'i') } });
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+    
+    // Load collection stats from settings
+    const Setting = require('mongoose').model('Setting');
+    let cardCount = 0, totalValue = 0, boosterCount = 0;
+    try {
+      const settingDoc = await Setting.findOne({ key: `vc_data_${user._id}` });
+      if (settingDoc && settingDoc.value) {
+        const data = typeof settingDoc.value === 'string' ? JSON.parse(settingDoc.value) : settingDoc.value;
+        const coll = data.coll || [];
+        cardCount = coll.length;
+        totalValue = coll.reduce((s, c) => s + (c.v || 0), 0);
+        boosterCount = new Set(coll.map(c => c.boosterRef).filter(Boolean)).size;
+      }
+    } catch(e) {}
+    
+    res.json({
+      username: user.username,
+      avatar: user.avatar || '',
+      bio: user.bio || '',
+      level: user.level || 1,
+      xp: user.xp || 0,
+      createdAt: user.createdAt,
+      cardCount,
+      totalValue,
+      boosterCount
+    });
+  } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
 module.exports = router;
