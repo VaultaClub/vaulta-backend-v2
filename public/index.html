@@ -2245,7 +2245,7 @@ function renderTx(){
 function txPg(d){const mx=Math.ceil(txHistory.length/TX_PP)-1;txPage=Math.max(0,Math.min(mx,txPage+d));renderTx()}
 
 // ========== MODALS / TOAST ==========
-function cMod(id){document.getElementById(id).classList.remove('on')}
+function cMod(id){document.getElementById(id).classList.remove('on');if(id==='userProfileM'&&window._profileHiddenModals){window._profileHiddenModals.forEach(function(m){m.style.visibility=''});window._profileHiddenModals=null}}
 function toast(msg,type='ok'){const t=document.getElementById('toast');document.getElementById('tI').textContent=type==='ok'?'✅':'❌';document.getElementById('tT').textContent=msg;t.className='toast '+type+' on';setTimeout(()=>t.classList.remove('on'),3500)}
 
 // ========== AUTH STATE ==========
@@ -2608,6 +2608,15 @@ function renderProfile(){
 async function openUserProfile(username){
   if(!username)return;
   if(currentUser&&currentUser.username.toLowerCase()===username.toLowerCase()){go('prof');return}
+  // Hide any modal that could block us (stacking context issue)
+  var _hiddenModals=[];
+  document.querySelectorAll('.cdm.on,.mbg.on,.ov.open').forEach(function(m){
+    if(m.id!=='userProfileM'){
+      m.style.visibility='hidden';
+      _hiddenModals.push(m);
+    }
+  });
+  window._profileHiddenModals=_hiddenModals;
   document.getElementById('userProfileM').classList.add('on');
   var upc=document.getElementById('userProfileContent');
   upc.innerHTML='<div style="padding:2rem;color:var(--vc-text-dim)">Chargement...</div>';
