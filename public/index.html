@@ -2578,9 +2578,8 @@ function _renderUserProfileModal(u){
   h+='<span style="background:var(--vc-primary);color:#fff;padding:.15rem .5rem;border-radius:6px;font-size:.68rem;font-weight:700;font-family:JetBrains Mono">Niv. '+(u.level||1)+'</span>';
   h+='<span style="font-size:.68rem;color:var(--vc-text-dim)">'+(u.xp||0)+' XP</span>';
   h+='</div></div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--vc-border)">';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--vc-border)">';
   h+='<div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-primary-light)">'+u.cardCount+'</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Cartes</div></div>';
-  h+='<div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-gold)">'+(u.totalValue||0).toFixed(2)+'€</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Valeur</div></div>';
   h+='<div style="padding:.8rem .5rem;text-align:center"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-accent)">'+u.boosterCount+'</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Boosters</div></div>';
   h+='</div>';
   h+='<div style="padding:.8rem 1.2rem"><div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--vc-text-dim);padding:.3rem 0"><span>Membre depuis</span><span style="color:var(--vc-text-secondary)">'+joined+'</span></div></div>';

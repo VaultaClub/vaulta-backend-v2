@@ -516,7 +516,6 @@ router.get('/public/:username', async (req, res) => {
       xp: user.xp || 0,
       createdAt: user.createdAt,
       cardCount,
-      totalValue,
       boosterCount
     });
   } catch (err) { res.status(500).json({ error: 'Erreur serveur' }); }
