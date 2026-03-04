@@ -756,6 +756,25 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 </div></div>
 <!-- Sell All Modal -->
 <div class="mbg" id="sellAllM"><div class="mod"><button class="mx" onclick="cMod('sellAllM')">×</button><h2>💱 Vendre tous les exemplaires</h2><p class="mn">Chaque exemplaire sera mis en vente au même prix. Commission de <span class="comm-pct">8</span>%.</p><div id="saInfo"></div><label style="font-size:.75rem;color:var(--vc-text-secondary)">Prix par carte (€)</label><input class="mi" id="saP" type="number" step="0.01" min="0.01" placeholder="Ex: 5.00" oninput="updSaNet()"><p class="mn">Vous recevrez : <strong id="saNet" style="color:var(--vc-green)">0.00€</strong></p><div id="saFeatOpt" style="margin:.6rem 0;padding:.6rem;border-radius:10px;border:1px solid var(--vc-border);background:var(--vc-bg-surface);cursor:pointer" onclick="toggleSaFeat()"><div style="display:flex;align-items:center;gap:.5rem"><div id="saFeatCheck" style="width:20px;height:20px;border-radius:5px;border:2px solid var(--vc-border);display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:.2s"></div><div style="flex:1"><div style="font-size:.78rem;font-weight:700;color:var(--vc-gold)">⭐ Mettre en avant</div><div style="font-size:.65rem;color:var(--vc-text-dim)">Toutes les annonces seront mises en avant pendant 5 jours</div></div><div style="font-family:JetBrains Mono;font-weight:700;font-size:.85rem;color:var(--vc-gold)">6.99€</div></div></div><div class="mr"><button class="rb" onclick="cMod('sellAllM')">Annuler</button><button class="rb pri" onclick="confirmSellAll()">Tout mettre en vente</button></div></div></div>
+
+<!-- Featured Confirmation Modal -->
+<div class="mbg" id="featConfirmM" onclick="if(event.target===this)cMod('featConfirmM')" style="z-index:10001"><div class="mod" style="max-width:360px;padding:0;overflow:hidden;border-radius:16px">
+  <div style="background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(245,158,11,.1));padding:1.2rem 1.5rem;text-align:center;border-bottom:1px solid var(--vc-border)">
+    <div style="font-size:2rem;margin-bottom:.4rem">⭐</div>
+    <div style="font-family:Exo 2;font-weight:800;font-size:1rem">Mise en avant</div>
+  </div>
+  <div style="padding:1.2rem 1.5rem;text-align:center">
+    <p style="font-size:.82rem;color:var(--vc-text-secondary);margin-bottom:.8rem">Votre annonce sera mise en avant pendant <strong style="color:var(--vc-text)">5 jours</strong> sur le marché.</p>
+    <div style="background:var(--vc-bg-surface);border-radius:10px;padding:.6rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:.78rem;color:var(--vc-text-dim)">Montant débité</span>
+      <span style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-gold)">6.99€</span>
+    </div>
+    <div style="display:flex;gap:.5rem">
+      <button onclick="cMod('featConfirmM')" style="flex:1;padding:.6rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-secondary);font-family:Chakra Petch;font-weight:600;font-size:.82rem;cursor:pointer">Annuler</button>
+      <button id="featConfirmBtn" style="flex:2;padding:.6rem;border-radius:8px;border:0;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a2e;font-family:Chakra Petch;font-weight:700;font-size:.85rem;cursor:pointer">⭐ Confirmer</button>
+    </div>
+  </div>
+</div></div>
 <!-- Recycle All Modal -->
 <div class="mbg" id="recAllM"><div class="mod"><button class="mx" onclick="cMod('recAllM')">×</button><h2>♻️ Recycler tous les exemplaires</h2><p class="mn">Recyclage instantané — <strong style="color:var(--vc-cyan)" class="rec-rate-lbl">40%</strong> de la valeur.</p><div id="raInfo"></div><div class="mr"><button class="rb" onclick="cMod('recAllM')">Annuler</button><button class="rb pri" onclick="confirmRecAll()">♻️ Tout recycler</button></div></div></div>
 <!-- Ship Cart Modal -->
@@ -1812,7 +1831,10 @@ function toggleSmFeat(){window._smFeatured=!window._smFeatured;var ch=document.g
 function updNet(){const p=parseFloat(document.getElementById('smP').value)||0;document.getElementById('smNet').textContent=(p*(1-getCommission())).toFixed(2)+'€'}
 function confirmSell(){if(!pendSell)return;const pr=parseFloat(document.getElementById('smP').value);if(!pr||pr<=0){toast('Prix invalide','err');return}
   var feat=window._smFeatured||false;
-  if(feat){if(bal<6.99){toast('Solde insuffisant pour la mise en avant (6.99€)','err');return}if(!confirm('⭐ La mise en avant coûtera 6.99€ (déduits de votre solde). Confirmer ?'))return;bal-=6.99;updBal();addTxH('pur','⭐ Mise en avant marché',-6.99)}
+  if(feat){if(bal<6.99){toast('Solde insuffisant pour la mise en avant (6.99€)','err');return}showFeatConfirm(function(){_doSell(pr,true)});return}
+  _doSell(pr,false)}
+function _doSell(pr,feat){
+  if(feat){bal-=6.99;updBal();addTxH('pur','⭐ Mise en avant marché',-6.99)}
   const c=pendSell;coll=coll.filter(x=>String(x.id)!==String(c.id));
   var featExpires=feat?new Date(Date.now()+5*24*60*60*1000).toISOString():null;
   saveMktListing({name:c.name,e:c.e,price:pr,seller:currentUser?currentUser.username:'Vous',r:c.r,set:c.pName,img:c.img,boosterRef:c.boosterRef,openDate:c.openDate,videoUrl:c.videoUrl,series:c.series||'',featured:feat,featuredExpires:featExpires,listDate:nowStr(),fr:c.fr||'pokemon'});
@@ -1835,7 +1857,11 @@ function confirmSellAll(){
   if(!pendSellAll||!pendSellAll.length)return;
   const pr=parseFloat(document.getElementById('saP').value);if(!pr||pr<=0){toast('Prix invalide','err');return}
   var feat=window._saFeatured||false;
-  if(feat){if(bal<6.99){toast('Solde insuffisant pour la mise en avant (6.99€)','err');return}if(!confirm('⭐ La mise en avant coûtera 6.99€ (déduits de votre solde). Confirmer ?'))return;bal-=6.99;updBal();addTxH('pur','⭐ Mise en avant marché',-6.99)}
+  if(feat){if(bal<6.99){toast('Solde insuffisant pour la mise en avant (6.99€)','err');return}showFeatConfirm(function(){_doSellAll(pr,true)});return}
+  _doSellAll(pr,false);
+}
+function _doSellAll(pr,feat){
+  if(feat){bal-=6.99;updBal();addTxH('pur','⭐ Mise en avant marché',-6.99)}
   var featExpires=feat?new Date(Date.now()+5*24*60*60*1000).toISOString():null;
   window._mktSeller=currentUser?currentUser.username:'Vous';
   pendSellAll.forEach(c=>{
@@ -1844,6 +1870,12 @@ function confirmSellAll(){
   });
   toast(feat?'⭐ '+pendSellAll.length+'× '+pendSellAll[0].name+' en vente et mis en avant !':pendSellAll.length+'× '+pendSellAll[0].name+' en vente !','ok');
   pendSellAll=null;cMod('sellAllM');renderColl();saveLocal();
+}
+
+// Custom featured confirmation modal
+function showFeatConfirm(onConfirm){
+  document.getElementById('featConfirmM').classList.add('on');
+  document.getElementById('featConfirmBtn').onclick=function(){cMod('featConfirmM');onConfirm()};
 }
 let pendSellAll=null;
 
