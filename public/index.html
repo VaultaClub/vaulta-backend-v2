@@ -441,7 +441,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 </div>
 <div class="pg" id="p-mkt">
   <div class="mkt">
-    <h1>Marché</h1>
+    <h1 style="margin-bottom:.8rem">Marché</h1>
     <div class="mkt-info">ℹ️ Commission de <span class="comm-pct">8</span>% sur chaque vente. Négociations possibles entre acheteurs et vendeurs.</div>
     <div class="mkt-filters" id="mktFilters"></div>
     <div class="mkt-featured" id="mktFeat"></div>
@@ -1941,15 +1941,7 @@ function bulkShip(){if(!coll.length){toast('Collection vide !','err');return}shi
 function confirmShip(){const sc=getShipCost();if(bal<sc){toast('Solde insuffisant','err');return}bal-=sc;const n=pendShip.length;coll=coll.filter(c=>!pendShip.includes(c.id)&&!pendShip.includes(String(c.id)));updBal();addTxH('pur','📦 Envoi',-sc);cMod('shipM');toast(`${n} carte(s) en route 🚀`,'ok');pendShip=[];renderColl();saveLocal()}
 
 /* ============ MARKETPLACE ============ */
-const sampleMkt=[
-  {name:'Charizard ex',e:'🔥',price:42,seller:'DragonMaster',r:'secret',set:'Flammes Obsidiennes',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv3/183.png',featured:true,fr:'pokemon',boosterRef:'VLT-X7K2-4201',openDate:'23 Fév 2026 14:32',videoUrl:'#',listDate:'24 Fév 2026 10:15'},
-  {name:'Mew ex',e:'🧬',price:50,seller:'PsyTrainer',r:'secret',set:'151',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv3pt5/205.png',featured:true,fr:'pokemon',boosterRef:'VLT-M3W1-3892',openDate:'22 Fév 2026 18:05',videoUrl:'#',listDate:'23 Fév 2026 09:30'},
-  {name:'Dragonite ex',e:'🐉',price:13.50,seller:'DragonFan',r:'ultra',set:'Flammes Obsidiennes',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv3/159.png',featured:false,fr:'pokemon',boosterRef:'VLT-DR4G-7721',openDate:'21 Fév 2026 20:14',videoUrl:'#',listDate:'22 Fév 2026 11:45'},
-  {name:'Iron Valiant ex',e:'⚔️',price:35,seller:'FutureTech',r:'secret',set:'Faille Paradoxe',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv4/205.png',featured:true,fr:'pokemon',boosterRef:'VLT-IR0N-5503',openDate:'20 Fév 2026 16:22',videoUrl:'#',listDate:'21 Fév 2026 08:00'},
-  {name:'Chien-Pao ex',e:'❄️',price:38,seller:'IceKing',r:'secret',set:'Évolutions à Paldea',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv2/176.png',featured:false,fr:'pokemon',boosterRef:'VLT-IC3K-2918',openDate:'19 Fév 2026 12:00',videoUrl:'#',listDate:'20 Fév 2026 14:20'},
-  {name:'Pikachu',e:'⚡',price:0.80,seller:'StarterPack',r:'common',set:'151',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv3pt5/25.png',featured:false,fr:'pokemon',boosterRef:'VLT-PKA1-6644',openDate:'18 Fév 2026 09:30',videoUrl:'#',listDate:'19 Fév 2026 10:00'},
-  {name:'Zapdos ex',e:'⚡',price:11,seller:'ThunderBird',r:'ultra',set:'151',series:'Écarlate & Violet',img:'https://images.pokemontcg.io/sv3pt5/145.png',featured:false,fr:'pokemon',boosterRef:'VLT-ZAP3-1192',openDate:'17 Fév 2026 15:45',videoUrl:'#',listDate:'18 Fév 2026 16:30'}
-];
+const sampleMkt=[];
 // Init marketplace in shared localStorage if not present
 if(!LS.get('vc_marketplace'))LS.set('vc_marketplace',[]);
 function getMktListings(){return LS.get('vc_marketplace',[])}
