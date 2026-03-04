@@ -7,11 +7,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-:root{--vc-bg:#08080e;--vc-bg-card:#0e0e1a;--vc-bg-surface:#141422;--vc-bg-elevated:#1c1c32;--vc-bg-hover:#222240;--vc-primary:#6366f1;--vc-primary-light:#818cf8;--vc-primary-dark:#4338ca;--vc-secondary:#7c3aed;--vc-accent:#a78bfa;--vc-blue:#3b82f6;--vc-gold:#fbbf24;--vc-fire:#ef4444;--vc-green:#34d399;--vc-cyan:#22d3ee;--vc-pink:#f472b6;--vc-text:#e8e8f0;--vc-text-secondary:#9898b8;--vc-text-dim:#5a5a78;--vc-border:#262644;--vc-glow:0 0 40px rgba(99,102,241,.2);--r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:24px}
+:root{--vc-bg:#08080e;--vc-bg-card:#0e0e1a;--vc-bg-surface:#141422;--vc-bg-elevated:#1c1c32;--vc-bg-hover:#222240;--vc-primary:#6366f1;--vc-primary-light:#818cf8;--vc-primary-dark:#4338ca;--vc-secondary:#7c3aed;--vc-accent:#a78bfa;--vc-blue:#3b82f6;--vc-gold:#fbbf24;--vc-fire:#ef4444;--vc-green:#34d399;--vc-cyan:#22d3ee;--vc-pink:#f472b6;--vc-text:#e8e8f0;--vc-text-secondary:#9898b8;--vc-text-dim:#5a5a78;--vc-border:#262644;--vc-glow:0 0 40px rgba(99,102,241,.2);--r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:24px;--vc-hdr-bg:rgba(8,8,14,.85);--vc-overlay-bg:rgba(8,8,14,.9);--vc-shadow:rgba(0,0,0,.5)}
+:root.light{--vc-bg:#f0f0f5;--vc-bg-card:#ffffff;--vc-bg-surface:#e8e8f0;--vc-bg-elevated:#dddde8;--vc-bg-hover:#d0d0dd;--vc-primary:#6366f1;--vc-primary-light:#4f46e5;--vc-primary-dark:#4338ca;--vc-secondary:#7c3aed;--vc-accent:#7c3aed;--vc-blue:#3b82f6;--vc-gold:#d97706;--vc-fire:#dc2626;--vc-green:#059669;--vc-cyan:#0891b2;--vc-pink:#db2777;--vc-text:#1a1a2e;--vc-text-secondary:#4a4a6a;--vc-text-dim:#8888a0;--vc-border:#c8c8d8;--vc-glow:0 0 40px rgba(99,102,241,.1);--vc-hdr-bg:rgba(240,240,245,.9);--vc-overlay-bg:rgba(240,240,245,.95);--vc-shadow:rgba(0,0,0,.1)}
+.light .logo-t{background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.light .sh-hero .br{background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.light .mbg{background:rgba(0,0,0,.4)}
+.light .prd-stk{background:rgba(255,255,255,.85)}
+.light .mod{box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.light .wpill{color:var(--vc-gold)}
+.light img{filter:none}
 *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
 body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',sans-serif;min-height:100vh;overflow-x:hidden}
 .atmo{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 15% 10%,rgba(99,102,241,.07) 0%,transparent 60%),radial-gradient(ellipse 70% 50% at 85% 90%,rgba(124,58,237,.06) 0%,transparent 55%)}
-.hdr{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;background:rgba(8,8,14,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--vc-border);display:flex;align-items:center;padding:0 1.5rem;gap:1rem}
+.hdr{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;background:var(--vc-hdr-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--vc-border);display:flex;align-items:center;padding:0 1.5rem;gap:1rem}
 .logo{font-family:'Exo 2';font-weight:900;font-size:1.2rem;letter-spacing:3px;display:flex;align-items:center;gap:.4rem;cursor:pointer;flex-shrink:0}
 .logo-i{width:30px;height:30px;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:900;color:#fff}
 .logo-t{background:linear-gradient(135deg,var(--vc-primary-light),var(--vc-accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -396,6 +404,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
   <div class="logo" onclick="go('shop')"><div class="logo-i">V</div><div><div class="logo-t">VAULTA</div><div class="logo-s">CLUB</div></div></div>
   <nav class="nav"><button class="nb on" data-p="shop" onclick="go('shop')">Boutique</button><button class="nb" data-p="coll" onclick="go('coll')">Collection</button><button class="nb" data-p="mkt" onclick="go('mkt')">Marché</button><button class="nb" data-p="trade" onclick="go('trade')" style="position:relative">Échange<span id="tradeNotifD" style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;background:#ef4444;color:#fff;border-radius:50%;font-size:.55rem;font-weight:700;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono';animation:tradePulse 2s infinite"></span></button><button class="nb" data-p="wal" onclick="go('wal')">Portefeuille</button><button class="nb" data-p="sup" onclick="go('sup')">Support</button></nav>
   <div class="hdr-r">
+    <button id="themeBtn" onclick="toggleTheme()" style="background:var(--vc-bg-surface);border:1px solid var(--vc-border);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:.3s;color:var(--vc-text)" title="Changer le thème">🌙</button>
     <div class="wpill" onclick="go('wal')" id="hBalPill" style="display:none">💎 <span id="hBal">0.00€</span></div>
     <div class="av" id="avBtn" onclick="toggleUserMenu()" style="position:relative">
       <span id="avText">?</span>
@@ -3769,6 +3778,20 @@ updateDynamicLabels();
 document.addEventListener('scroll',()=>{const m=document.getElementById('userMenu');if(m)m.style.display='none'});
 document.getElementById('lPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 document.getElementById('rPass2')?.addEventListener('keydown',e=>{if(e.key==='Enter')doRegister()});
+
+// ============ THEME TOGGLE ============
+function toggleTheme(){
+  var isLight=document.documentElement.classList.toggle('light');
+  localStorage.setItem('vc_theme',isLight?'light':'dark');
+  document.getElementById('themeBtn').textContent=isLight?'☀️':'🌙';
+}
+(function initTheme(){
+  var saved=localStorage.getItem('vc_theme');
+  if(saved==='light'){
+    document.documentElement.classList.add('light');
+    document.getElementById('themeBtn').textContent='☀️';
+  }
+})();
 </script>
 </body>
 </html>
