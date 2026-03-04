@@ -1990,8 +1990,6 @@ function confirmShip(){const sc=getShipCost();if(bal<sc){toast('Solde insuffisan
 
 /* ============ MARKETPLACE ============ */
 const sampleMkt=[];
-// Init marketplace in shared localStorage if not present
-if(!LS.get('vc_marketplace'))LS.set('vc_marketplace',[]);
 function getMktListings(){return LS.get('vc_marketplace',[])}
 function saveMktListing(item){const list=getMktListings();list.push(item);LS.set('vc_marketplace',list)}
 
@@ -2607,7 +2605,12 @@ function renderProfile(){
 // ============ PUBLIC USER PROFILE MODAL ============
 async function openUserProfile(username){
   if(!username)return;
-  if(currentUser&&currentUser.username.toLowerCase()===username.toLowerCase()){go('prof');return}
+  if(currentUser&&currentUser.username.toLowerCase()===username.toLowerCase()){
+    // Close any open modals first, then navigate to profile
+    document.querySelectorAll('.cdm.on').forEach(function(m){m.classList.remove('on')});
+    document.querySelectorAll('.mbg.on').forEach(function(m){m.classList.remove('on')});
+    go('prof');return;
+  }
   // Hide any modal that could block us (stacking context issue)
   var _hiddenModals=[];
   document.querySelectorAll('.cdm.on,.mbg.on,.ov.open').forEach(function(m){
