@@ -1135,13 +1135,9 @@ async function buyPack(id){
   if(!currentUser){openAuth();return}
   const p=P.find(x=>x.id===id);if(!p||p.stock<=0)return;
   
-  // Load pool from API if not ready
+  // Start loading pool in background (don't wait for it)
   if(!p.pool||p.pool.length<5||!p.pool[0].img){
-    const pool=await loadPoolForProduct(id);
-    if(!pool||pool.length<5){
-      toast('❌ Les cartes ne sont pas encore disponibles pour ce booster. Réessayez.','err');
-      return;
-    }
+    loadPoolForProduct(id);
   }
   const n=qty[id]||1,tot=p.price*n;
   const afterBal=bal-tot;
@@ -1208,6 +1204,17 @@ function bcAdjQty(id,d){
 async function executeBuyPack(id){
   cMod('boosterConfirmM');
   const p=P.find(x=>x.id===id);if(!p||p.stock<=0)return;
+  
+  // Ensure pool is loaded before opening
+  if(!p.pool||p.pool.length<5||!p.pool[0].img){
+    toast('⏳ Chargement des cartes...','ok');
+    const pool=await loadPoolForProduct(id);
+    if(!pool||pool.length<5){
+      toast('❌ Les cartes ne sont pas encore disponibles. Réessayez.','err');
+      return;
+    }
+  }
+  
   const n=qty[id]||1,tot=p.price*n;
   if(bal<tot){toast('Solde insuffisant !','err');return}
   bal-=tot;p.stock-=n;updBal();addTxH('pur',`${n}x ${p.name}`,-tot);
@@ -3505,7 +3512,6 @@ function loadLocal(){
     if(d.txHistory)txHistory=d.txHistory;
     if(d.negoHistory)negoHistory=d.negoHistory;
   }else{
-    // First login — NO welcome bonus (only via referral code)
     bal=0;
     coll=[];
     txHistory=[];
