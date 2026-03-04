@@ -2552,55 +2552,40 @@ function renderProfile(){
 // ============ PUBLIC USER PROFILE MODAL ============
 async function openUserProfile(username){
   if(!username)return;
-  // Don't open own profile in modal
   if(currentUser&&currentUser.username.toLowerCase()===username.toLowerCase()){go('prof');return}
   document.getElementById('userProfileM').classList.add('on');
-  document.getElementById('userProfileContent').innerHTML='<div style="padding:2rem;color:var(--vc-text-dim)">Chargement...</div>';
+  var upc=document.getElementById('userProfileContent');
+  upc.innerHTML='<div style="padding:2rem;color:var(--vc-text-dim)">Chargement...</div>';
   try{
-    const res=await fetch('/api/auth/public/'+encodeURIComponent(username));
-    if(!res.ok)throw new Error('Not found');
-    const u=await res.json();
-    const isImg=u.avatar&&(u.avatar.startsWith('data:')||u.avatar.startsWith('/'));
-    const initials=u.username.substring(0,2).toUpperCase();
-    const avatarHTML=isImg
-      ?`<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-      :`<span style="font-size:2rem">${u.avatar||initials}</span>`;
-    const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'—';
-    document.getElementById('userProfileContent').innerHTML=`
-      <div style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.2));padding:1.5rem 1.2rem 1rem;position:relative">
-        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Exo 2';font-weight:900;margin:0 auto .6rem;overflow:hidden;border:3px solid rgba(255,255,255,.15)">${avatarHTML}</div>
-        <div style="font-family:'Exo 2';font-weight:800;font-size:1.2rem">@${u.username}</div>
-        ${u.bio?`<div style="font-size:.75rem;color:var(--vc-text-secondary);margin-top:.3rem;font-style:italic">${u.bio}</div>`:''}
-        <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.5rem">
-          <span style="background:var(--vc-primary);color:#fff;padding:.15rem .5rem;border-radius:6px;font-size:.68rem;font-weight:700;font-family:'JetBrains Mono'">Niv. ${u.level||1}</span>
-          <span style="font-size:.68rem;color:var(--vc-text-dim)">${u.xp||0} XP</span>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--vc-border)">
-        <div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)">
-          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-primary-light)">${u.cardCount}</div>
-          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Cartes</div>
-        </div>
-        <div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)">
-          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-gold)">${u.totalValue.toFixed(2)}€</div>
-          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Valeur</div>
-        </div>
-        <div style="padding:.8rem .5rem;text-align:center">
-          <div style="font-family:'JetBrains Mono';font-weight:800;font-size:1.1rem;color:var(--vc-accent)">${u.boosterCount}</div>
-          <div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Boosters</div>
-        </div>
-      </div>
-      <div style="padding:.8rem 1.2rem">
-        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--vc-text-dim);padding:.3rem 0">
-          <span>📅 Membre depuis</span><span style="color:var(--vc-text-secondary)">${joined}</span>
-        </div>
-      </div>
-      <div style="padding:0 1.2rem 1rem">
-        <button onclick="cMod('userProfileM')" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:'Chakra Petch';font-weight:600;font-size:.78rem;cursor:pointer">Fermer</button>
-      </div>`;
+    var res=await fetch('/api/auth/public/'+encodeURIComponent(username));
+    if(!res.ok)throw new Error('x');
+    var u=await res.json();
+    _renderUserProfileModal(u);
   }catch(e){
-    document.getElementById("userProfileContent").innerHTML="<div style=\"padding:2rem;color:var(--vc-fire)\">Utilisateur introuvable</div><div style=\"padding:0 1.2rem 1rem\"><button onclick=\"cMod('userProfileM')\" style=\"width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:Chakra Petch;font-weight:600;font-size:.78rem;cursor:pointer\">Fermer</button></div>";
+    upc.innerHTML='<div style="padding:2rem;color:var(--vc-fire)">Utilisateur introuvable</div><div style="padding:0 1.2rem 1rem"><button onclick="cMod(&quot;userProfileM&quot;)" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:Chakra Petch;font-weight:600;font-size:.78rem;cursor:pointer">Fermer</button></div>';
   }
+}
+function _renderUserProfileModal(u){
+  var isImg=u.avatar&&(u.avatar.startsWith('data:')||u.avatar.startsWith('/'));
+  var ini=u.username.substring(0,2).toUpperCase();
+  var avH=isImg?'<img src="'+u.avatar+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':'<span style="font-size:2rem">'+(u.avatar||ini)+'</span>';
+  var joined=u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'—';
+  var h='<div style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.2));padding:1.5rem 1.2rem 1rem;text-align:center">';
+  h+='<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--vc-primary),var(--vc-secondary));display:flex;align-items:center;justify-content:center;color:#fff;font-family:Exo 2;font-weight:900;margin:0 auto .6rem;overflow:hidden;border:3px solid rgba(255,255,255,.15)">'+avH+'</div>';
+  h+='<div style="font-family:Exo 2;font-weight:800;font-size:1.2rem">@'+u.username+'</div>';
+  if(u.bio)h+='<div style="font-size:.75rem;color:var(--vc-text-secondary);margin-top:.3rem;font-style:italic">'+u.bio+'</div>';
+  h+='<div style="display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.5rem">';
+  h+='<span style="background:var(--vc-primary);color:#fff;padding:.15rem .5rem;border-radius:6px;font-size:.68rem;font-weight:700;font-family:JetBrains Mono">Niv. '+(u.level||1)+'</span>';
+  h+='<span style="font-size:.68rem;color:var(--vc-text-dim)">'+(u.xp||0)+' XP</span>';
+  h+='</div></div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--vc-border)">';
+  h+='<div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-primary-light)">'+u.cardCount+'</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Cartes</div></div>';
+  h+='<div style="padding:.8rem .5rem;text-align:center;border-right:1px solid var(--vc-border)"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-gold)">'+(u.totalValue||0).toFixed(2)+'€</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Valeur</div></div>';
+  h+='<div style="padding:.8rem .5rem;text-align:center"><div style="font-family:JetBrains Mono;font-weight:800;font-size:1.1rem;color:var(--vc-accent)">'+u.boosterCount+'</div><div style="font-size:.6rem;color:var(--vc-text-dim);text-transform:uppercase;letter-spacing:.5px">Boosters</div></div>';
+  h+='</div>';
+  h+='<div style="padding:.8rem 1.2rem"><div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--vc-text-dim);padding:.3rem 0"><span>Membre depuis</span><span style="color:var(--vc-text-secondary)">'+joined+'</span></div></div>';
+  h+='<div style="padding:0 1.2rem 1rem"><button onclick="cMod(&quot;userProfileM&quot;)" style="width:100%;padding:.55rem;border-radius:8px;border:1px solid var(--vc-border);background:var(--vc-bg-card);color:var(--vc-text-dim);font-family:Chakra Petch;font-weight:600;font-size:.78rem;cursor:pointer">Fermer</button></div>';
+  document.getElementById('userProfileContent').innerHTML=h;
 }
 
 function openAvatarMenu(){
@@ -2936,7 +2921,7 @@ function tradeOfferCard(o, dir){
   
   return `<div style="background:var(--vc-bg-card);border:1px solid ${o.status==='accepted'?'rgba(52,211,153,.3)':o.status==='pending'?'rgba(251,191,36,.2)':'var(--vc-border)'};border-radius:10px;padding:.8rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .2s" onclick="viewOfferDetail('${o._id}','${dir}')" onmouseover="this.style.borderColor='var(--vc-primary)'" onmouseout="this.style.borderColor='${o.status==='accepted'?'rgba(52,211,153,.3)':'var(--vc-border)'}'" >
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-      <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(\''+o.fromUsername+'\')">@'+o.fromUsername+'</span>':'À <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(\''+o.toUsername+'\')">@'+o.toUsername+'</span>'}</div>
+      <div style="font-size:.78rem;font-weight:600">${dir==='received'?'De <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(&quot;'+o.fromUsername+'&quot;)">@'+o.fromUsername+'</span>':'À <span style="cursor:pointer;color:var(--vc-primary-light)" onclick="event.stopPropagation();openUserProfile(&quot;'+o.toUsername+'&quot;)">@'+o.toUsername+'</span>'}</div>
       <span style="font-size:.65rem;color:${statusColors[o.status]};font-weight:600">${statusLabels[o.status]}</span>
     </div>
     ${offeredCards.length?`<div style="display:flex;gap:.25rem;margin-bottom:.3rem">${offeredCards.slice(0,6).map(c=>{
