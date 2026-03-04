@@ -227,7 +227,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 .rd-common{background:#666}.rd-uncommon{background:var(--vc-green);box-shadow:0 0 5px var(--vc-green)}.rd-rare{background:var(--vc-blue);box-shadow:0 0 7px var(--vc-blue)}.rd-ultra{background:var(--vc-gold);box-shadow:0 0 9px var(--vc-gold)}.rd-secret{background:var(--vc-accent);box-shadow:0 0 11px var(--vc-accent)}
 .copies-badge{position:absolute;top:4px;right:4px;background:rgba(99,102,241,.92);color:#fff;font-family:'JetBrains Mono';font-size:.55rem;font-weight:700;padding:.12rem .4rem;border-radius:4px;z-index:3}
 /* Card Detail Modal */
-.cdm{position:fixed;inset:0;z-index:300;background:rgba(4,4,8,.92);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:1rem}.cdm.on{display:flex}
+.cdm{position:fixed;inset:0;z-index:300;background:rgba(4,4,8,.92);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:1rem;overflow-y:auto}.cdm.on{display:flex}
 .cdm-inner{display:flex;gap:2rem;max-width:750px;width:95%;animation:mi .3s ease}
 @keyframes mi{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .cdm-img{width:260px;flex-shrink:0;border-radius:var(--r-lg);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative}
@@ -340,7 +340,7 @@ body{background:var(--vc-bg);color:var(--vc-text);font-family:'Chakra Petch',san
 .ptcl{position:absolute;border-radius:50%;animation:ptf 1.2s ease-out forwards}
 @keyframes ptf{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--px),var(--py)) scale(0);opacity:0}}
 .mnav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(8,8,14,.95);backdrop-filter:blur(20px);border-top:1px solid var(--vc-border);z-index:100;padding:.35rem .2rem;justify-content:space-around}
-@media(max-width:768px){.mnav{display:flex}.nav{display:none}.main{padding-bottom:62px}.grd{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding:0 1rem 2rem}.bp{grid-template-columns:1fr}.bsp{display:none}.dch{grid-template-columns:repeat(2,1fr)}.coll-tb{flex-direction:column;align-items:flex-start}.cdm-inner{flex-direction:column;align-items:center}.cdm-img{width:180px}}
+@media(max-width:768px){.mnav{display:flex}.nav{display:none}.main{padding-bottom:62px}.grd{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding:0 1rem 2rem}.bp{grid-template-columns:1fr}.bsp{display:none}.dch{grid-template-columns:repeat(2,1fr)}.coll-tb{flex-direction:column;align-items:flex-start}.cdm{align-items:flex-start;padding:.5rem}.cdm-inner{flex-direction:column;align-items:center;gap:1rem;margin:auto}.cdm-img{width:160px}.cdm-row{font-size:.72rem}.cdm-act{font-size:.68rem;padding:.4rem .5rem}}
 .mb{background:0;border:0;color:var(--vc-text-dim);font-family:'Chakra Petch';font-size:.55rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:.1rem;cursor:pointer;padding:.15rem .5rem}
 .mb .ico{font-size:1.1rem}.mb.on{color:var(--vc-primary-light)}
 .empty{text-align:center;color:var(--vc-text-dim);padding:3rem 0}
@@ -1747,8 +1747,6 @@ function renderCD(){
     </div>`;
   }
   document.getElementById('cdMeta').innerHTML=`
-    ${c.cardNum?`<div class="cdm-row">🔢 N° carte : <span>${c.cardNum}${c.setOfficial?'/'+c.setOfficial:c.setTotal?'/'+c.setTotal:''}</span></div>`:''}
-    ${c.category?`<div class="cdm-row">🏷️ Catégorie : <span>${c.category==='Pokemon'?'Pokémon':c.category}</span></div>`:''}
     <div class="cdm-row">📦 Booster : <span>${c.pName}</span></div>
     <div class="cdm-row">🏷️ Réf booster : <span>${c.boosterRef||'N/A'}</span></div>
     <div class="cdm-row">📅 Ouvert le : <span>${c.openDate||'N/A'}</span></div>
